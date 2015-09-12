@@ -8,6 +8,8 @@ public class BStorage {
     private static long currentTime = 0;
     private static String currentBeer = null;
 
+    private static double final_beers = 0;
+
     public static Map<String, Long> getBeers() {
         return beers;
     }
@@ -30,5 +32,13 @@ public class BStorage {
 
     public static void setCurrentBeer(String currentBeer) {
         BStorage.currentBeer = currentBeer;
+    }
+
+    public static void setFinal_beers(double final_beers) {
+        BStorage.final_beers = final_beers;
+    }
+
+    public static double getFinal_beers() {
+        return final_beers;
     }
 }
