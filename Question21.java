@@ -1,18 +1,62 @@
 package com.remington.beeroclock;
 
-import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
+        import android.content.Intent;
+        import android.support.v7.app.AppCompatActivity;
+        import android.os.Bundle;
+        import android.view.Menu;
+        import android.view.MenuItem;
+        import android.view.View;
+        import android.widget.Button;
+        import android.widget.Toast;
 
 public class Question21 extends AppCompatActivity {
+
+    public void sendNoMessage(int i) {
+        if (this.i == 0) {
+            Toast.makeText(Question21.this, "You Sure", Toast.LENGTH_SHORT).show();
+            ++this.i;
+        }
+        else if (i == 1)
+        {
+            Toast.makeText(Question21.this,
+                    "Just click yes, man. You can use root beer or something",
+                    Toast.LENGTH_LONG).show();
+            ++this.i;
+        }
+        else
+        {
+            Toast.makeText(Question21.this, "Ugh Fine", Toast.LENGTH_SHORT).show();
+            this.i = 0;
+            // make app close
+            System.exit(0);
+        }
+    }
+
+    private int i = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_question21);
+
+        Button next = (Button) findViewById(R.id.yes_button);
+        next.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent next_intent = new Intent(Question21.this, TimeTrial.this);
+                startActivity(next_intent);
+            }
+        });
+
+        Button no = (Button) findViewById(R.id.no_button);
+
+        no.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sendNoMessage(i);
+            }
+        });
+
     }
 
     @Override
@@ -35,10 +79,5 @@ public class Question21 extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    public void sendYesMessage(View view) {
-        Intent intent = new Intent(Question21.this, TimeTrial.class);
-        startActivity(intent);
     }
 }
