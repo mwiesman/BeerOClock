@@ -41,6 +41,10 @@ public class TimeTrial extends AppCompatActivity {
                     stopChronometer(v);
                     timer.setText("Finished");
                     timer.setEnabled(false);
+                    long elapsedMillis = SystemClock.elapsedRealtime()
+                            - ((Chronometer) findViewById(R.id.beer_chronometer)).getBase();
+                    Toast.makeText(TimeTrial.this, "Elapsed milliseconds: " + elapsedMillis,
+                            Toast.LENGTH_SHORT).show();
                 }
             }
 
