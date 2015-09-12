@@ -1,11 +1,53 @@
-package com.remington.beeroclock;
+package com.mfwiesman.beeroclock;
 
-import android.support.v7.app.AppCompatActivity;
+import android.content.Context;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.Chronometer;
 
 public class TimeTrial extends AppCompatActivity {
+
+    private Context mContext;
+
+    public void startChronometer(View view) {
+        ((Chronometer) findViewById(R.id.beer_chronometer)).start();
+    }
+
+    public void stopChronometer(View view) {
+        ((Chronometer) findViewById(R.id.beer_chronometer)).stop();
+    }
+
+
+    private int i = 0;
+    private Button timer;
+
+    public TimeTrial(Context context) {
+        mContext = context;
+        timer = (Button) findViewById(R.id.timer_button);
+        timer.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                // need a counter so if they click again should stop
+                // change text as well
+                if (i == 0) {
+                    startChronometer(v);
+                    timer.setText("Stop Timer");
+                    ++i;
+                }
+                else if (i == 1) {
+                    stopChronometer(v);
+                    timer.setText("Finished");
+                    timer.setEnabled(false);
+                }
+            }
+
+        });
+    }
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
