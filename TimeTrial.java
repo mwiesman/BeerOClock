@@ -1,4 +1,4 @@
-package com.mfwiesman.beeroclock;
+package com.remington.beeroclock;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -10,12 +10,13 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Chronometer;
 import android.widget.Toast;
+import android.content.Intent;
 
 public class TimeTrial extends AppCompatActivity {
 
-    private Context mContext;
+    public TimeTrial() {}
 
-    public TimeTrial () {}
+    private Context mContext;
 
     public void startChronometer(View view) {
         ((Chronometer) findViewById(R.id.beer_chronometer)).start();
@@ -29,8 +30,11 @@ public class TimeTrial extends AppCompatActivity {
     private int i = 0;
     private Button timer;
 
-    public TimeTrial(Context context) {
-        mContext = context;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_time_trial);
+
         timer = (Button) findViewById(R.id.timer_button);
         timer.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -40,27 +44,23 @@ public class TimeTrial extends AppCompatActivity {
                     startChronometer(v);
                     timer.setText("Stop Timer");
                     ++i;
-                }
-                else if (i == 1) {
+                } else if (i == 1) {
                     stopChronometer(v);
-                    timer.setText("Finished");
-                    timer.setEnabled(false);
+                    timer.setText("Save Time");
                     long elapsedMillis = SystemClock.elapsedRealtime()
-                            - ((Chronometer) findViewById(R.id.beer_chronometer)).getBase();
-                    Toast.makeText(TimeTrial.this, "Elapsed milliseconds: " + elapsedMillis,
-                            Toast.LENGTH_SHORT).show();
+                            - ((Chronometer) findViewById(R.id.beer_chronometer)).getBase() - 1000;
+                    Toast.makeText(TimeTrial.this, "Elapsed seconds: " + elapsedMillis / 1000 + "."
+                                    + elapsedMillis % 1000, Toast.LENGTH_SHORT).show();
+                    ++i;
                 }
+                else if (i == 2) {
+                    Intent x = new Intent(TimeTrial.this, TimeSave.class);
+                    startActivity(x);
+                }
+
             }
 
         });
-    }
-
-
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_time_trial);
     }
 
     @Override
