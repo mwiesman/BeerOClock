@@ -1,0 +1,59 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    tools:context="com.mfwiesman.beeroclock.FoodSelector">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Food Selector"
+        android:id="@+id/food_select_text"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true" />
+    <!-- replace the below text with a drop down menu -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="You're gonna do hamburgers...for now...sorry"
+        android:id="@+id/hamburger_text"
+        android:layout_below="@+id/food_select_text"
+        android:layout_alignRight="@+id/food_select_text"
+        android:layout_alignEnd="@+id/food_select_text"
+        android:layout_marginTop="46dp" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:ems="10"
+        android:id="@+id/num_ounces_edit_text"
+        android:layout_below="@+id/hamburger_text"
+        android:layout_alignRight="@+id/hamburger_text"
+        android:layout_alignEnd="@+id/hamburger_text"
+        android:layout_marginTop="87dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="oz"
+        android:id="@+id/ounce_text"
+        android:layout_alignBottom="@+id/num_ounces_edit_text"
+        android:layout_toRightOf="@+id/num_ounces_edit_text"
+        android:layout_toEndOf="@+id/num_ounces_edit_text" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Time To COOK (and Drink)"
+        android:id="@+id/continue_cook_button"
+        android:layout_alignParentBottom="true"
+        android:layout_alignRight="@+id/ounce_text"
+        android:layout_alignEnd="@+id/ounce_text"
+        android:layout_marginBottom="39dp" />
+</RelativeLayout>
