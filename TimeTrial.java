@@ -2,16 +2,20 @@ package com.mfwiesman.beeroclock;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Chronometer;
+import android.widget.Toast;
 
 public class TimeTrial extends AppCompatActivity {
 
     private Context mContext;
+
+    public TimeTrial () {}
 
     public void startChronometer(View view) {
         ((Chronometer) findViewById(R.id.beer_chronometer)).start();
