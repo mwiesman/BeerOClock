@@ -1,72 +1,69 @@
-package com.mfwiesman.beeroclock;
+package com.remington.beeroclock;
 
-import android.content.Context;
-import android.os.Bundle;
-import android.os.SystemClock;
+
+
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Chronometer;
 import android.widget.Toast;
 
-public class TimeTrial extends AppCompatActivity {
+public class Question21 extends AppCompatActivity {
 
-    private Context mContext;
-
-    public TimeTrial () {}
-
-    public void startChronometer(View view) {
-        ((Chronometer) findViewById(R.id.beer_chronometer)).start();
+    public void sendNoMessage(int i) {
+        if (this.i == 0) {
+            Toast.makeText(Question21.this, "You Sure", Toast.LENGTH_SHORT).show();
+            ++this.i;
+        }
+        else if (i == 1)
+        {
+            Toast.makeText(Question21.this,
+                    "Just click yes, man. You can use root beer or something",
+                    Toast.LENGTH_LONG).show();
+            ++this.i;
+        }
+        else
+        {
+            Toast.makeText(Question21.this, "Ugh Fine", Toast.LENGTH_SHORT).show();
+            this.i = 0;
+            // make app close
+            System.exit(0);
+        }
     }
-
-    public void stopChronometer(View view) {
-        ((Chronometer) findViewById(R.id.beer_chronometer)).stop();
-    }
-
 
     private int i = 0;
-    private Button timer;
-
-    public TimeTrial(Context context) {
-        mContext = context;
-        timer = (Button) findViewById(R.id.timer_button);
-        timer.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                // need a counter so if they click again should stop
-                // change text as well
-                if (i == 0) {
-                    startChronometer(v);
-                    timer.setText("Stop Timer");
-                    ++i;
-                }
-                else if (i == 1) {
-                    stopChronometer(v);
-                    timer.setText("Finished");
-                    timer.setEnabled(false);
-                    long elapsedMillis = SystemClock.elapsedRealtime()
-                            - ((Chronometer) findViewById(R.id.beer_chronometer)).getBase();
-                    Toast.makeText(TimeTrial.this, "Elapsed milliseconds: " + elapsedMillis,
-                            Toast.LENGTH_SHORT).show();
-                }
-            }
-
-        });
-    }
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_time_trial);
+        setContentView(R.layout.activity_question21);
+
+        Button yes = (Button) findViewById(R.id.yes_button);
+        yes.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent x = new Intent(Question21.this, TimeTrial.class);
+                startActivity(x);
+            }
+        });
+
+        Button no = (Button) findViewById(R.id.no_button);
+        no.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sendNoMessage(i);
+            }
+        });
+
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_time_trial, menu);
+        getMenuInflater().inflate(R.menu.menu_question21, menu);
         return true;
     }
 
