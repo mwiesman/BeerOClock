@@ -11,12 +11,12 @@ import android.widget.EditText;
 
 public class FoodSelector extends AppCompatActivity {
 
-    cookTimes burger_cook_time = new cookTimes("Hamburger", 3);
+    CookTimes burger_cook_time = new CookTimes("Hamburger", 3);
 
     //make an enum of all the food types in the list - instead of using string
     // or an array of food types and their cooking time per oz
     // could use a map that has a string as it's key value is time per oz
-    public double foodToTime(cookTimes foodType, int oz)
+    public double foodToTime(CookTimes foodType, int oz)
     {
 
         // take avg cooking time per oz for a food type * oz
@@ -35,7 +35,7 @@ public class FoodSelector extends AppCompatActivity {
             public void onClick(View v) {
                 String ounces_entered = num_ounces_text.getText().toString();
                 int num_ounces_int = Integer.parseInt(ounces_entered);
-                foodToTime(burger_cook_time, num_ounces_int);
+                BStorage.setFinal_beers(foodToTime(burger_cook_time, num_ounces_int));
                 Intent x = new Intent(FoodSelector.this, BeerTimer.class);
                 startActivity(x);
             }
