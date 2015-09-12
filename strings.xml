@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Beer O\'Clock</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_question21">Question21</string>
+    <string name="title_activity_time_trial">TIME TRIAL</string>
+    <string name="title_activity_startup_screen_boc">StartupScreenBOC</string>
+    <string name="title_activity_time_save">TimeSave</string>
+    <string name="title_activity_food_selector">FoodSelector</string>
+    <string name="title_activity_beer_timer">BeerTimer</string>
+</resources>
