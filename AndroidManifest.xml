@@ -10,7 +10,6 @@
         <activity
             android:name=".BeerOClock"
             android:label="@string/app_name" >
-
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.mfwiesman.beeroclock.StartupScreenBOC" />
@@ -38,13 +37,34 @@
         <activity
             android:name=".StartupScreenBOC"
             android:label="@string/title_activity_startup_screen_boc" >
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
+        </activity>
+        <activity
+            android:name=".TimeSave"
+            android:label="@string/title_activity_time_save"
+            android:parentActivityName=".TimeTrial" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.mfwiesman.beeroclock.TimeTrial" />
+        </activity>
+        <activity
+            android:name=".FoodSelector"
+            android:label="@string/title_activity_food_selector" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.mfwiesman.beeroclock.TimeSave" />
+        </activity>
+        <activity
+            android:name=".BeerTimer"
+            android:label="@string/title_activity_beer_timer"
+            android:parentActivityName=".FoodSelector" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.mfwiesman.beeroclock.FoodSelector" />
         </activity>
     </application>
 
