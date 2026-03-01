@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Beer O'Clock",
+    "slug": "beer-oclock",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "beeroclock",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#451A03"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.beeroclock.app"
+    },
+    "android": {
+      "package": "com.beeroclock.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#451A03"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
