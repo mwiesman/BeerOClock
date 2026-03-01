@@ -2,6 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COLD_ONE_KEY = 'cold_one_seconds';
 const REMINDERS_KEY = 'cold_one_reminders_enabled';
+const GLASS_STYLE_KEY = 'glass_style';
+
+export type GlassStyle = 'pint' | 'mug' | 'bottle' | 'can' | 'random';
 
 export async function saveColdOneTime(seconds: number): Promise<void> {
   await AsyncStorage.setItem(COLD_ONE_KEY, seconds.toString());
@@ -19,6 +22,16 @@ export async function saveRemindersEnabled(enabled: boolean): Promise<void> {
 export async function getRemindersEnabled(): Promise<boolean> {
   const value = await AsyncStorage.getItem(REMINDERS_KEY);
   return value === null ? true : JSON.parse(value);
+}
+
+export async function saveGlassStyle(style: GlassStyle): Promise<void> {
+  await AsyncStorage.setItem(GLASS_STYLE_KEY, style);
+}
+
+export async function getGlassStyle(): Promise<GlassStyle> {
+  const value = await AsyncStorage.getItem(GLASS_STYLE_KEY);
+  if (value === 'pint' || value === 'mug' || value === 'bottle' || value === 'can' || value === 'random') return value;
+  return 'random';
 }
 
 export function formatTime(totalSeconds: number): string {

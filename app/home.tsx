@@ -1,8 +1,12 @@
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { colors, spacing, fontSize } from '../src/theme';
+import { colors, spacing, fontSize, shadows } from '../src/theme';
 import { getColdOneTime, formatTime } from '../src/utils/storage';
+import ScreenBackground from '../src/components/ScreenBackground';
+import Button from '../src/components/Button';
+import Card from '../src/components/Card';
+import { BeerIcon } from '../src/components/icons/RecipeIcons';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -15,56 +19,55 @@ export default function HomeScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.emoji}>🍺</Text>
-      <Text style={styles.title}>Beer O'Clock</Text>
-      <Text style={styles.subtitle}>Cooking time, measured in Cold Ones</Text>
+    <ScreenBackground>
+      <View style={styles.container}>
+        <BeerIcon size={80} />
+        <Text style={styles.title}>Beer O'Clock</Text>
+        <Text style={styles.subtitle}>Cooking time, measured in Cold Ones</Text>
 
-      {coldOneTime ? (
-        <View style={styles.coldOneCard}>
-          <Text style={styles.coldOneLabel}>Your Cold One</Text>
-          <Text style={styles.coldOneValue}>{formatTime(coldOneTime)}</Text>
-          <Pressable
-            style={styles.recalibrateButton}
+        {coldOneTime ? (
+          <Card style={styles.coldOneCard}>
+            <View style={styles.coldOneInner}>
+              <Text style={styles.coldOneLabel}>Your Cold One</Text>
+              <Text style={styles.coldOneValue}>{formatTime(coldOneTime)}</Text>
+              <Button
+                title="Recalibrate"
+                variant="secondary"
+                onPress={() => router.push('/timer')}
+                style={styles.recalibrateBtn}
+                textStyle={styles.recalibrateBtnText}
+              />
+            </View>
+          </Card>
+        ) : (
+          <Card style={styles.coldOneCard}>
+            <View style={styles.coldOneInner}>
+              <Text style={styles.coldOneLabel}>No Cold One time set</Text>
+              <Text style={styles.coldOneHint}>
+                Time yourself drinking a beer to get started
+              </Text>
+            </View>
+          </Card>
+        )}
+
+        <View style={styles.buttonContainer}>
+          <Button
+            title={coldOneTime ? 'Time Another Cold One' : 'Time a Cold One'}
             onPress={() => router.push('/timer')}
-          >
-            <Text style={styles.recalibrateText}>Recalibrate</Text>
-          </Pressable>
+          />
+          <Button
+            title="Recipes"
+            variant="dark"
+            onPress={() => router.push('/recipes')}
+          />
+          <Button
+            title="Settings"
+            variant="secondary"
+            onPress={() => router.push('/settings')}
+          />
         </View>
-      ) : (
-        <View style={styles.coldOneCard}>
-          <Text style={styles.coldOneLabel}>No Cold One time set</Text>
-          <Text style={styles.coldOneHint}>
-            Time yourself drinking a beer to get started
-          </Text>
-        </View>
-      )}
-
-      <View style={styles.buttonContainer}>
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => router.push('/timer')}
-        >
-          <Text style={styles.buttonText}>
-            {coldOneTime ? '🍺 Time Another Cold One' : '🍺 Time a Cold One'}
-          </Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.recipesButton}
-          onPress={() => router.push('/recipes')}
-        >
-          <Text style={styles.buttonText}>🔥 Recipes</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.settingsButton}
-          onPress={() => router.push('/settings')}
-        >
-          <Text style={styles.settingsText}>⚙️ Settings</Text>
-        </Pressable>
       </View>
-    </View>
+    </ScreenBackground>
   );
 }
 
@@ -74,16 +77,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
-    backgroundColor: colors.cream,
-  },
-  emoji: {
-    fontSize: 80,
-    marginBottom: spacing.md,
   },
   title: {
     fontSize: fontSize.hero,
     fontWeight: 'bold',
     color: colors.brown,
+    marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
   subtitle: {
@@ -93,14 +92,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   coldOneCard: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: spacing.lg,
-    alignItems: 'center',
     width: '100%',
     marginBottom: spacing.xl,
-    borderWidth: 2,
-    borderColor: colors.amberLight,
+  },
+  coldOneInner: {
+    alignItems: 'center',
   },
   coldOneLabel: {
     fontSize: fontSize.md,
@@ -117,46 +113,15 @@ const styles = StyleSheet.create({
     color: colors.gray,
     textAlign: 'center',
   },
-  recalibrateButton: {
+  recalibrateBtn: {
     marginTop: spacing.sm,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
+    ...shadows.sm,
   },
-  recalibrateText: {
+  recalibrateBtnText: {
     fontSize: fontSize.sm,
-    color: colors.amber,
-    fontWeight: '600',
   },
   buttonContainer: {
     width: '100%',
     gap: spacing.md,
-  },
-  primaryButton: {
-    backgroundColor: colors.amber,
-    paddingVertical: 18,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  recipesButton: {
-    backgroundColor: colors.brown,
-    paddingVertical: 18,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: fontSize.lg,
-    fontWeight: 'bold',
-  },
-  settingsButton: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  settingsText: {
-    color: colors.grayDark,
-    fontSize: fontSize.md,
-    fontWeight: '600',
   },
 });

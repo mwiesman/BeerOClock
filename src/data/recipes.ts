@@ -10,7 +10,8 @@ export interface Recipe {
   category: 'beef' | 'pork' | 'chicken' | 'fish' | 'veggies' | 'other';
   steps: RecipeStep[];
   totalTimeMinutes: number;
-  imageEmoji: string;
+  imageEmoji: string; // legacy, kept for fallback
+  icon: string; // key into recipeIconMap
 }
 
 export const recipes: Recipe[] = [
@@ -20,6 +21,7 @@ export const recipes: Recipe[] = [
     description: 'Quarter-pound beef patty grilled to perfection.',
     category: 'beef',
     imageEmoji: '🍔',
+    icon: 'burger',
     totalTimeMinutes: 8,
     steps: [
       { instruction: 'Form patties and season with salt & pepper.' },
@@ -34,6 +36,7 @@ export const recipes: Recipe[] = [
     description: 'Thin, crispy-edged smash burgers with maximum crust.',
     category: 'beef',
     imageEmoji: '🫓',
+    icon: 'burger',
     totalTimeMinutes: 6,
     steps: [
       { instruction: 'Roll beef into loose balls. Heat grill/griddle screaming hot.' },
@@ -48,6 +51,7 @@ export const recipes: Recipe[] = [
     description: 'Medium-rare NY strip with a perfect sear.',
     category: 'beef',
     imageEmoji: '🥩',
+    icon: 'steak',
     totalTimeMinutes: 10,
     steps: [
       { instruction: 'Bring steak to room temp. Season generously.' },
@@ -62,6 +66,7 @@ export const recipes: Recipe[] = [
     description: 'Juicy chicken breast with tangy BBQ glaze.',
     category: 'chicken',
     imageEmoji: '🍗',
+    icon: 'chicken',
     totalTimeMinutes: 20,
     steps: [
       { instruction: 'Pound chicken to even thickness. Season.' },
@@ -77,6 +82,7 @@ export const recipes: Recipe[] = [
     description: 'Cedar-plank style grilled salmon fillet.',
     category: 'fish',
     imageEmoji: '🐟',
+    icon: 'fish',
     totalTimeMinutes: 12,
     steps: [
       { instruction: 'Season salmon with olive oil, lemon, salt & pepper.' },
@@ -90,6 +96,7 @@ export const recipes: Recipe[] = [
     description: 'Classic grilled franks with char marks.',
     category: 'other',
     imageEmoji: '🌭',
+    icon: 'hotdog',
     totalTimeMinutes: 8,
     steps: [
       { instruction: 'Score hot dogs diagonally.' },
@@ -103,6 +110,7 @@ export const recipes: Recipe[] = [
     description: 'Low and slow smoked ribs. This is a commitment.',
     category: 'pork',
     imageEmoji: '🍖',
+    icon: 'ribs',
     totalTimeMinutes: 180,
     steps: [
       { instruction: 'Remove membrane. Apply dry rub generously.' },
@@ -117,6 +125,7 @@ export const recipes: Recipe[] = [
     description: 'Sweet charred corn with butter.',
     category: 'veggies',
     imageEmoji: '🌽',
+    icon: 'corn',
     totalTimeMinutes: 15,
     steps: [
       { instruction: 'Peel husks back, remove silk, re-wrap.' },
@@ -130,6 +139,7 @@ export const recipes: Recipe[] = [
     description: 'Quick and simple grilled asparagus spears.',
     category: 'veggies',
     imageEmoji: '🥬',
+    icon: 'veggie',
     totalTimeMinutes: 8,
     steps: [
       { instruction: 'Trim woody ends. Toss with olive oil, salt, pepper.' },
@@ -143,6 +153,7 @@ export const recipes: Recipe[] = [
     description: "The king of BBQ. That's a LOT of Cold Ones.",
     category: 'beef',
     imageEmoji: '🔥',
+    icon: 'fire',
     totalTimeMinutes: 360,
     steps: [
       { instruction: 'Trim fat cap to 1/4 inch. Apply rub. Let sit overnight.' },

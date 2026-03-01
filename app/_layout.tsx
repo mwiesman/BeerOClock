@@ -1,6 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
-import { Pressable, Text } from 'react-native';
-import { colors } from '../src/theme';
+import { Pressable, View, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, gradients } from '../src/theme';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -9,10 +10,11 @@ export default function RootLayout() {
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor: colors.brown },
-        headerTintColor: colors.amber,
+        headerTintColor: colors.cream,
         headerTitleStyle: { fontWeight: 'bold' },
         contentStyle: { backgroundColor: colors.cream },
         headerBackTitle: '',
+        headerShadowVisible: false,
       }}
     >
       <Stack.Screen
@@ -30,7 +32,13 @@ export default function RootLayout() {
           gestureEnabled: false,
           headerRight: () => (
             <Pressable onPress={() => router.push('/settings')} hitSlop={8}>
-              <Text style={{ color: colors.amber, fontSize: 22 }}>⚙️</Text>
+              <View style={headerStyles.gearIcon}>
+                <View style={headerStyles.gearCenter} />
+                <View style={[headerStyles.gearTooth, { top: -2 }]} />
+                <View style={[headerStyles.gearTooth, { bottom: -2 }]} />
+                <View style={[headerStyles.gearTooth, { left: -2, top: 4, transform: [{ rotate: '90deg' }] }]} />
+                <View style={[headerStyles.gearTooth, { right: -2, top: 4, transform: [{ rotate: '90deg' }] }]} />
+              </View>
             </Pressable>
           ),
         }}
@@ -49,3 +57,27 @@ export default function RootLayout() {
     </Stack>
   );
 }
+
+const headerStyles = StyleSheet.create({
+  gearIcon: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gearCenter: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2.5,
+    borderColor: colors.cream,
+    backgroundColor: 'transparent',
+  },
+  gearTooth: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 1,
+    backgroundColor: colors.cream,
+  },
+});

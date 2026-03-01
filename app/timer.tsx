@@ -3,15 +3,18 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   TextInput,
   Alert,
   Keyboard,
   TouchableWithoutFeedback,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors, spacing, fontSize } from '../src/theme';
+import { colors, spacing, fontSize, shadows, emboss } from '../src/theme';
 import { saveColdOneTime, formatTimerDisplay } from '../src/utils/storage';
+import ScreenBackground from '../src/components/ScreenBackground';
+import Button from '../src/components/Button';
+import Card from '../src/components/Card';
+import { BeerIcon } from '../src/components/icons/RecipeIcons';
 
 type TimerState = 'idle' | 'running' | 'stopped';
 
@@ -52,7 +55,7 @@ export default function TimerScreen() {
       }
       await saveColdOneTime(seconds);
       Alert.alert(
-        'Cold One Saved! 🍺',
+        'Cold One Saved!',
         `Your Cold One is ${Math.floor(seconds / 60)}m ${Math.floor(seconds % 60)}s`,
         [{ text: 'Nice!', onPress: () => router.back() }]
       );
@@ -69,98 +72,104 @@ export default function TimerScreen() {
 
   if (showManual) {
     return (
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.container}>
-          <Text style={styles.emoji}>⏱️</Text>
-          <Text style={styles.heading}>Enter Your Cold One Time</Text>
-          <Text style={styles.hint}>How long does it take you to drink a beer?</Text>
+      <ScreenBackground>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.container}>
+            <BeerIcon size={64} />
+            <Text style={styles.heading}>Enter Your Cold One Time</Text>
+            <Text style={styles.hint}>How long does it take you to drink a beer?</Text>
 
-          <View style={styles.manualInputRow}>
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.timeInput}
-                keyboardType="number-pad"
-                placeholder="0"
-                placeholderTextColor={colors.gray}
-                value={manualMinutes}
-                onChangeText={setManualMinutes}
-                maxLength={2}
-              />
-              <Text style={styles.inputLabel}>min</Text>
+            <View style={styles.manualInputRow}>
+              <View style={styles.inputGroup}>
+                <Card variant="inset" style={styles.inputCard}>
+                  <TextInput
+                    style={styles.timeInput}
+                    keyboardType="number-pad"
+                    placeholder="0"
+                    placeholderTextColor={colors.gray}
+                    value={manualMinutes}
+                    onChangeText={setManualMinutes}
+                    maxLength={2}
+                  />
+                </Card>
+                <Text style={styles.inputLabel}>min</Text>
+              </View>
+              <Text style={styles.colon}>:</Text>
+              <View style={styles.inputGroup}>
+                <Card variant="inset" style={styles.inputCard}>
+                  <TextInput
+                    style={styles.timeInput}
+                    keyboardType="number-pad"
+                    placeholder="00"
+                    placeholderTextColor={colors.gray}
+                    value={manualSeconds}
+                    onChangeText={setManualSeconds}
+                    maxLength={2}
+                  />
+                </Card>
+                <Text style={styles.inputLabel}>sec</Text>
+              </View>
             </View>
-            <Text style={styles.colon}>:</Text>
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.timeInput}
-                keyboardType="number-pad"
-                placeholder="00"
-                placeholderTextColor={colors.gray}
-                value={manualSeconds}
-                onChangeText={setManualSeconds}
-                maxLength={2}
-              />
-              <Text style={styles.inputLabel}>sec</Text>
-            </View>
-          </View>
 
-          <View style={styles.buttonContainer}>
-            <Pressable style={styles.primaryButton} onPress={saveManualTime}>
-              <Text style={styles.buttonText}>Save Cold One Time</Text>
-            </Pressable>
+            <View style={styles.buttonContainer}>
+              <Button title="Save Cold One Time" onPress={saveManualTime} />
+            </View>
+            <Button
+              title="Use stopwatch instead"
+              variant="secondary"
+              onPress={() => setShowManual(false)}
+              style={styles.linkBtn}
+            />
           </View>
-          <Pressable style={styles.linkButton} onPress={() => setShowManual(false)}>
-            <Text style={styles.linkText}>Use stopwatch instead</Text>
-          </Pressable>
-        </View>
-      </TouchableWithoutFeedback>
+        </TouchableWithoutFeedback>
+      </ScreenBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.emoji}>🍺</Text>
-      <Text style={styles.heading}>
-        {timerState === 'idle' && 'Ready to Time a Cold One?'}
-        {timerState === 'running' && 'Drink Up!'}
-        {timerState === 'stopped' && 'Done!'}
-      </Text>
-      <Text style={styles.hint}>
-        {timerState === 'idle' && 'Start the timer when you start drinking'}
-        {timerState === 'running' && 'Stop when you finish your beer'}
-        {timerState === 'stopped' && 'Save this as your Cold One time?'}
-      </Text>
+    <ScreenBackground>
+      <View style={styles.container}>
+        <BeerIcon size={64} />
+        <Text style={styles.heading}>
+          {timerState === 'idle' && 'Ready to Time a Cold One?'}
+          {timerState === 'running' && 'Drink Up!'}
+          {timerState === 'stopped' && 'Done!'}
+        </Text>
+        <Text style={styles.hint}>
+          {timerState === 'idle' && 'Start the timer when you start drinking'}
+          {timerState === 'running' && 'Stop when you finish your beer'}
+          {timerState === 'stopped' && 'Save this as your Cold One time?'}
+        </Text>
 
-      <Text style={styles.timerDisplay}>{formatTimerDisplay(elapsed)}</Text>
+        <Card variant="inset" style={styles.timerCard}>
+          <Text style={styles.timerDisplay}>{formatTimerDisplay(elapsed)}</Text>
+        </Card>
 
-      <View style={styles.buttonContainer}>
+        <View style={styles.buttonContainer}>
+          {timerState === 'idle' && (
+            <Button title="Start Drinking" variant="success" onPress={startTimer} />
+          )}
+          {timerState === 'running' && (
+            <Button title="Done!" variant="danger" onPress={stopTimer} />
+          )}
+          {timerState === 'stopped' && (
+            <>
+              <Button title="Save as My Cold One" onPress={() => saveTime(elapsed)} />
+              <Button title="Try Again" variant="secondary" onPress={resetTimer} />
+            </>
+          )}
+        </View>
+
         {timerState === 'idle' && (
-          <Pressable style={styles.startButton} onPress={startTimer}>
-            <Text style={styles.buttonText}>Start Drinking</Text>
-          </Pressable>
-        )}
-        {timerState === 'running' && (
-          <Pressable style={styles.stopButton} onPress={stopTimer}>
-            <Text style={styles.buttonText}>Done!</Text>
-          </Pressable>
-        )}
-        {timerState === 'stopped' && (
-          <>
-            <Pressable style={styles.primaryButton} onPress={() => saveTime(elapsed)}>
-              <Text style={styles.buttonText}>Save as My Cold One</Text>
-            </Pressable>
-            <Pressable style={styles.secondaryButton} onPress={resetTimer}>
-              <Text style={styles.secondaryButtonText}>Try Again</Text>
-            </Pressable>
-          </>
+          <Button
+            title="Enter time manually instead"
+            variant="secondary"
+            onPress={() => setShowManual(true)}
+            style={styles.linkBtn}
+          />
         )}
       </View>
-
-      {timerState === 'idle' && (
-        <Pressable style={styles.linkButton} onPress={() => setShowManual(true)}>
-          <Text style={styles.linkText}>Enter time manually instead</Text>
-        </Pressable>
-      )}
-    </View>
+    </ScreenBackground>
   );
 }
 
@@ -170,17 +179,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
-    backgroundColor: colors.cream,
-  },
-  emoji: {
-    fontSize: 80,
-    marginBottom: spacing.md,
   },
   heading: {
     fontSize: fontSize.xl,
     fontWeight: 'bold',
     color: colors.brown,
     textAlign: 'center',
+    marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
   hint: {
@@ -189,63 +194,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.xl,
   },
+  timerCard: {
+    width: '100%',
+    marginBottom: spacing.xl,
+    alignItems: 'center',
+  },
   timerDisplay: {
     fontSize: 72,
     fontWeight: 'bold',
     color: colors.brown,
     fontVariant: ['tabular-nums'],
-    marginBottom: spacing.xl,
+    textAlign: 'center',
   },
   buttonContainer: {
     width: '100%',
     gap: spacing.md,
     marginBottom: spacing.md,
   },
-  startButton: {
-    backgroundColor: colors.green,
-    paddingVertical: 18,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  stopButton: {
-    backgroundColor: colors.red,
-    paddingVertical: 18,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  primaryButton: {
-    backgroundColor: colors.amber,
-    paddingVertical: 18,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: fontSize.lg,
-    fontWeight: 'bold',
-  },
-  secondaryButton: {
-    backgroundColor: colors.grayLight,
-    paddingVertical: 18,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: colors.grayDark,
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-  },
-  linkButton: {
-    paddingVertical: spacing.md,
-  },
-  linkText: {
-    color: colors.amber,
-    fontSize: fontSize.md,
-    fontWeight: '600',
+  linkBtn: {
+    marginTop: spacing.sm,
+    ...shadows.sm,
   },
   manualInputRow: {
     flexDirection: 'row',
@@ -256,17 +224,17 @@ const styles = StyleSheet.create({
   inputGroup: {
     alignItems: 'center',
   },
+  inputCard: {
+    padding: 0,
+  },
   timeInput: {
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.amberLight,
-    borderRadius: 12,
     fontSize: fontSize.xxl,
     fontWeight: 'bold',
     color: colors.brown,
     textAlign: 'center',
     width: 100,
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
   inputLabel: {
     fontSize: fontSize.sm,

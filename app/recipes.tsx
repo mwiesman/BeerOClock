@@ -1,9 +1,13 @@
 import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, FlatList } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { colors, spacing, fontSize } from '../src/theme';
+import { colors, spacing, fontSize, shadows, emboss } from '../src/theme';
 import { getColdOneTime, formatColdOnes, toColdOnes } from '../src/utils/storage';
 import { recipes, Recipe } from '../src/data/recipes';
+import { recipeIconMap, BeerIcon } from '../src/components/icons/RecipeIcons';
+import ScreenBackground from '../src/components/ScreenBackground';
+import Card from '../src/components/Card';
+import Button from '../src/components/Button';
 
 export default function RecipesScreen() {
   const router = useRouter();
@@ -17,43 +21,50 @@ export default function RecipesScreen() {
 
   const renderRecipe = ({ item }: { item: Recipe }) => {
     const coldOnes = coldOneTime ? toColdOnes(item.totalTimeMinutes, coldOneTime) : null;
+    const IconComponent = recipeIconMap[item.icon] || BeerIcon;
 
     return (
       <Pressable
-        style={styles.recipeCard}
         onPress={() => router.push(`/recipe/${item.id}`)}
+        style={({ pressed }) => [pressed && styles.cardPressed]}
       >
-        <Text style={styles.recipeEmoji}>{item.imageEmoji}</Text>
-        <View style={styles.recipeInfo}>
-          <Text style={styles.recipeName}>{item.name}</Text>
-          <Text style={styles.recipeDesc} numberOfLines={1}>
-            {item.description}
-          </Text>
-          <View style={styles.timeRow}>
-            <Text style={styles.realTime}>{item.totalTimeMinutes} min</Text>
-            {coldOnes !== null && (
-              <Text style={styles.coldOneTime}>
-                🍺 {formatColdOnes(coldOnes)}
+        <Card style={styles.recipeCard}>
+          <View style={styles.recipeRow}>
+            <View style={styles.iconWrap}>
+              <IconComponent size={44} />
+            </View>
+            <View style={styles.recipeInfo}>
+              <Text style={styles.recipeName}>{item.name}</Text>
+              <Text style={styles.recipeDesc} numberOfLines={1}>
+                {item.description}
               </Text>
-            )}
+              <View style={styles.timeRow}>
+                <Text style={styles.realTime}>{item.totalTimeMinutes} min</Text>
+                {coldOnes !== null && (
+                  <Text style={styles.coldOneTime}>
+                    {formatColdOnes(coldOnes)}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <View style={styles.chevronWrap}>
+              <Text style={styles.chevron}>&rsaquo;</Text>
+            </View>
           </View>
-        </View>
-        <Text style={styles.chevron}>›</Text>
+        </Card>
       </Pressable>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <ScreenBackground>
       {!coldOneTime && (
-        <Pressable
-          style={styles.calibrateBar}
+        <Button
+          title="Time a Cold One to see recipe times in Cold Ones!"
           onPress={() => router.push('/timer')}
-        >
-          <Text style={styles.calibrateText}>
-            ⏱️ Time a Cold One to see recipe times in Cold Ones!
-          </Text>
-        </Pressable>
+          style={styles.calibrateBar}
+          textStyle={styles.calibrateText}
+        />
       )}
       <FlatList
         data={recipes}
@@ -62,23 +73,20 @@ export default function RecipesScreen() {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.cream,
-  },
   calibrateBar: {
-    backgroundColor: colors.amberLight,
+    backgroundColor: colors.amberDark,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
+    ...emboss.subtle,
   },
   calibrateText: {
-    color: colors.brown,
+    color: colors.white,
     fontSize: fontSize.sm,
     fontWeight: '600',
   },
@@ -88,19 +96,18 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   recipeCard: {
-    backgroundColor: colors.white,
-    borderRadius: 14,
-    padding: spacing.md,
+    marginBottom: 0,
+  },
+  cardPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  recipeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.grayLight,
   },
-  recipeEmoji: {
-    fontSize: 36,
+  iconWrap: {
     marginRight: spacing.md,
-    width: 44,
-    textAlign: 'center',
   },
   recipeInfo: {
     flex: 1,
@@ -130,9 +137,12 @@ const styles = StyleSheet.create({
     color: colors.amber,
     fontWeight: '600',
   },
-  chevron: {
-    fontSize: 24,
-    color: colors.gray,
+  chevronWrap: {
     marginLeft: spacing.sm,
+  },
+  chevron: {
+    fontSize: 28,
+    color: colors.amberDark,
+    fontWeight: '300',
   },
 });

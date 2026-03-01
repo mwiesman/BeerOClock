@@ -1,23 +1,41 @@
 import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Switch, Pressable } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { colors, spacing, fontSize } from '../src/theme';
+import { colors, spacing, fontSize, shadows, emboss } from '../src/theme';
 import {
   getColdOneTime,
   formatTime,
   getRemindersEnabled,
   saveRemindersEnabled,
+  getGlassStyle,
+  saveGlassStyle,
+  GlassStyle,
 } from '../src/utils/storage';
+import ScreenBackground from '../src/components/ScreenBackground';
+import Card from '../src/components/Card';
+import Button from '../src/components/Button';
+import SectionHeader from '../src/components/SectionHeader';
+import { BeerIcon } from '../src/components/icons/RecipeIcons';
+
+const GLASS_OPTIONS: { value: GlassStyle; label: string; desc: string }[] = [
+  { value: 'random', label: 'Random', desc: 'Surprise me' },
+  { value: 'pint', label: 'Pint', desc: 'Classic glass' },
+  { value: 'mug', label: 'Mug', desc: 'Frosty handle' },
+  { value: 'bottle', label: 'Bottle', desc: 'Longneck' },
+  { value: 'can', label: 'Can', desc: 'Tall boy' },
+];
 
 export default function SettingsScreen() {
   const router = useRouter();
   const [coldOneTime, setColdOneTime] = useState<number | null>(null);
   const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [glassStyle, setGlassStyle] = useState<GlassStyle>('random');
 
   useFocusEffect(
     useCallback(() => {
       getColdOneTime().then(setColdOneTime);
       getRemindersEnabled().then(setRemindersEnabled);
+      getGlassStyle().then(setGlassStyle);
     }, [])
   );
 
@@ -26,94 +44,115 @@ export default function SettingsScreen() {
     await saveRemindersEnabled(value);
   };
 
+  const selectGlass = async (style: GlassStyle) => {
+    setGlassStyle(style);
+    await saveGlassStyle(style);
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Cold One</Text>
+    <ScreenBackground>
+      <View style={styles.container}>
+        <SectionHeader title="Cold One" />
 
-        <View style={styles.row}>
-          <View style={styles.rowInfo}>
-            <Text style={styles.rowLabel}>Your Cold One Time</Text>
-            <Text style={styles.rowValue}>
-              {coldOneTime ? formatTime(coldOneTime) : 'Not set'}
-            </Text>
+        <Card style={styles.row}>
+          <View style={styles.rowInner}>
+            <View style={styles.rowInfo}>
+              <Text style={styles.rowLabel}>Your Cold One Time</Text>
+              <Text style={styles.rowValue}>
+                {coldOneTime ? formatTime(coldOneTime) : 'Not set'}
+              </Text>
+            </View>
+            <Button
+              title={coldOneTime ? 'Recalibrate' : 'Set'}
+              onPress={() => router.push('/timer')}
+              style={styles.rowButton}
+              textStyle={styles.rowButtonText}
+            />
           </View>
-          <Pressable
-            style={styles.rowButton}
-            onPress={() => router.push('/timer')}
-          >
-            <Text style={styles.rowButtonText}>
-              {coldOneTime ? 'Recalibrate' : 'Set'}
-            </Text>
-          </Pressable>
-        </View>
-      </View>
+        </Card>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Reminders</Text>
+        <SectionHeader title="Reminders" />
 
-        <View style={styles.row}>
-          <View style={styles.rowInfo}>
-            <Text style={styles.rowLabel}>Cold One Reminders</Text>
-            <Text style={styles.rowHint}>
-              Get notified when it's time to crack another Cold One while cooking
-            </Text>
+        <Card style={styles.row}>
+          <View style={styles.rowInner}>
+            <View style={styles.rowInfo}>
+              <Text style={styles.rowLabel}>Cold One Reminders</Text>
+              <Text style={styles.rowHint}>
+                Get notified when it's time to crack another Cold One while cooking
+              </Text>
+            </View>
+            <Switch
+              value={remindersEnabled}
+              onValueChange={toggleReminders}
+              trackColor={{ false: colors.grayLight, true: colors.amberLight }}
+              thumbColor={remindersEnabled ? colors.amber : colors.gray}
+            />
           </View>
-          <Switch
-            value={remindersEnabled}
-            onValueChange={toggleReminders}
-            trackColor={{ false: colors.grayLight, true: colors.amberLight }}
-            thumbColor={remindersEnabled ? colors.amber : colors.gray}
-          />
-        </View>
-      </View>
+        </Card>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
-        <View style={styles.row}>
+        <SectionHeader title="Glass Style" />
+
+        <Card style={styles.row}>
+          <Text style={styles.rowLabel}>Pour One Out Glass</Text>
+          <Text style={styles.rowHint}>Choose your glass for the opening animation</Text>
+          <View style={styles.glassOptions}>
+            {GLASS_OPTIONS.map((opt) => {
+              const selected = glassStyle === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  onPress={() => selectGlass(opt.value)}
+                  style={[
+                    styles.glassOption,
+                    selected && styles.glassOptionSelected,
+                  ]}
+                >
+                  <Text style={[styles.glassOptionLabel, selected && styles.glassOptionLabelSelected]}>
+                    {opt.label}
+                  </Text>
+                  <Text style={[styles.glassOptionDesc, selected && styles.glassOptionDescSelected]}>
+                    {opt.desc}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Card>
+
+        <SectionHeader title="About" />
+
+        <Card style={styles.row}>
           <View>
             <Text style={styles.rowLabel}>Beer O'Clock v1.0.0</Text>
             <Text style={styles.rowHint}>Cooking time, measured in Cold Ones</Text>
           </View>
-        </View>
-        <View style={styles.dedicationCard}>
-          <Text style={styles.dedicationText}>
-            Dedicated to Jim O'Connor.{'\n'}This one's for you. 🍺
-          </Text>
-        </View>
+        </Card>
+
+        <Card variant="dark" style={styles.dedicationCard}>
+          <View style={styles.dedicationInner}>
+            <BeerIcon size={32} />
+            <Text style={styles.dedicationText}>
+              For Jim O.
+            </Text>
+          </View>
+        </Card>
       </View>
-    </View>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.cream,
     padding: spacing.md,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    color: colors.gray,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: spacing.sm,
-    marginLeft: spacing.xs,
   },
   row: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  rowInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: colors.grayLight,
-    marginBottom: spacing.sm,
   },
   rowInfo: {
     flex: 1,
@@ -136,21 +175,55 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   rowButton: {
-    backgroundColor: colors.amber,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 8,
+    ...shadows.sm,
   },
   rowButtonText: {
-    color: colors.white,
+    fontSize: fontSize.sm,
+  },
+  glassOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  glassOption: {
+    minWidth: 70,
+    flexGrow: 1,
+    flexBasis: '28%',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.grayLight,
+    backgroundColor: colors.white,
+  },
+  glassOptionSelected: {
+    borderColor: colors.amber,
+    backgroundColor: colors.creamDark,
+  },
+  glassOptionLabel: {
     fontSize: fontSize.sm,
     fontWeight: 'bold',
+    color: colors.grayDark,
+  },
+  glassOptionLabelSelected: {
+    color: colors.brown,
+  },
+  glassOptionDesc: {
+    fontSize: 11,
+    color: colors.gray,
+    marginTop: 2,
+  },
+  glassOptionDescSelected: {
+    color: colors.amberDark,
   },
   dedicationCard: {
-    backgroundColor: colors.brownMedium,
-    borderRadius: 12,
-    padding: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  dedicationInner: {
     alignItems: 'center',
+    gap: spacing.sm,
   },
   dedicationText: {
     color: colors.amberLight,

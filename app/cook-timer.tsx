@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, Vibration } from 'react-native';
+import { View, Text, StyleSheet, Alert, Vibration } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { colors, spacing, fontSize } from '../src/theme';
+import { colors, spacing, fontSize, shadows } from '../src/theme';
 import {
   getColdOneTime,
   formatTimerDisplay,
@@ -10,6 +10,10 @@ import {
   getRemindersEnabled,
 } from '../src/utils/storage';
 import { recipes, RecipeStep } from '../src/data/recipes';
+import { recipeIconMap, BeerIcon, FireIcon } from '../src/components/icons/RecipeIcons';
+import ScreenBackground from '../src/components/ScreenBackground';
+import Button from '../src/components/Button';
+import Card from '../src/components/Card';
 
 type CookState = 'ready' | 'cooking' | 'paused' | 'step-done' | 'finished';
 
@@ -45,7 +49,6 @@ export default function CookTimerScreen() {
     if (intervalRef.current) clearInterval(intervalRef.current);
   }, []);
 
-  // Calculate current Cold One number based on total elapsed time
   const getCurrentColdOneNumber = useCallback(() => {
     if (!coldOneTime) return 0;
     const totalElapsed = globalElapsedRef.current + stepElapsedRef.current;
@@ -60,7 +63,6 @@ export default function CookTimerScreen() {
     if (left <= 0) {
       clearTimer();
       Vibration.vibrate([0, 500, 200, 500]);
-      // Commit this step's elapsed time to global total
       globalElapsedRef.current += stepElapsedRef.current;
       stepElapsedRef.current = 0;
       setCookState('step-done');
@@ -101,7 +103,7 @@ export default function CookTimerScreen() {
       setColdOnesNotified(currentColdOnes);
       Vibration.vibrate(200);
       Alert.alert(
-        `🍺 Cold One #${currentColdOnes + 1}!`,
+        `Cold One #${currentColdOnes + 1}!`,
         'Time to crack open another one!'
       );
     }
@@ -142,102 +144,115 @@ export default function CookTimerScreen() {
 
   if (!recipe) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.heading}>Recipe not found</Text>
-        <Pressable style={styles.primaryButton} onPress={() => router.back()}>
-          <Text style={styles.primaryButtonText}>Go Back</Text>
-        </Pressable>
-      </View>
+      <ScreenBackground>
+        <View style={styles.container}>
+          <Text style={styles.heading}>Recipe not found</Text>
+          <Button title="Go Back" onPress={() => router.back()} />
+        </View>
+      </ScreenBackground>
     );
   }
 
+  const IconComponent = recipeIconMap[recipe.icon] || BeerIcon;
   const totalColdOnes = coldOneTime
     ? toColdOnes(recipe.totalTimeMinutes, coldOneTime)
     : null;
 
-  // Current Cold One number for display
   const displayColdOne = coldOneTime
     ? Math.floor((globalElapsedRef.current + stepElapsedRef.current) / coldOneTime) + 1
     : null;
 
   if (cookState === 'finished') {
     return (
-      <View style={styles.container}>
-        <Text style={styles.bigEmoji}>🎉</Text>
-        <Text style={styles.heading}>Done!</Text>
-        <Text style={styles.subtext}>
-          Your {recipe.name} is ready!
-        </Text>
-        {totalColdOnes !== null && (
-          <Text style={styles.coldOneSummary}>
-            🍺 That was about {formatColdOnes(totalColdOnes)}
+      <ScreenBackground>
+        <View style={styles.container}>
+          <FireIcon size={80} />
+          <Text style={styles.heading}>Done!</Text>
+          <Text style={styles.subtext}>
+            Your {recipe.name} is ready!
           </Text>
-        )}
-        <Pressable style={styles.primaryButton} onPress={() => router.dismissAll()}>
-          <Text style={styles.primaryButtonText}>Back to Home</Text>
-        </Pressable>
-      </View>
+          {totalColdOnes !== null && (
+            <Card style={styles.summaryCard}>
+              <View style={styles.summaryInner}>
+                <BeerIcon size={36} />
+                <Text style={styles.coldOneSummary}>
+                  That was about {formatColdOnes(totalColdOnes)}
+                </Text>
+              </View>
+            </Card>
+          )}
+          <Button title="Back to Home" onPress={() => router.dismissAll()} />
+        </View>
+      </ScreenBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Quit button */}
-      <Pressable style={styles.quitButton} onPress={confirmQuit}>
-        <Text style={styles.quitButtonText}>✕ Quit</Text>
-      </Pressable>
+    <ScreenBackground>
+      <View style={styles.container}>
+        {/* Quit button */}
+        <View style={styles.quitWrap}>
+          <Button
+            title="Quit"
+            variant="secondary"
+            onPress={confirmQuit}
+            style={styles.quitButton}
+            textStyle={styles.quitText}
+          />
+        </View>
 
-      <Text style={styles.progressText}>
-        Step {currentStepIndex + 1} of {recipe.steps.length}
-      </Text>
-
-      <View style={styles.stepCard}>
-        <Text style={styles.stepEmoji}>{recipe.imageEmoji}</Text>
-        <Text style={styles.stepInstruction}>{currentStep?.instruction}</Text>
-      </View>
-
-      {hasTimer && cookState !== 'ready' && (
-        <Text style={styles.timerDisplay}>{formatTimerDisplay(remaining)}</Text>
-      )}
-
-      {displayColdOne && coldOneTime && cookState === 'cooking' && remindersEnabled && (
-        <Text style={styles.coldOneTracker}>
-          🍺 Cold One #{displayColdOne}
+        <Text style={styles.progressText}>
+          Step {currentStepIndex + 1} of {recipe.steps.length}
         </Text>
-      )}
 
-      <View style={styles.buttonContainer}>
-        {cookState === 'ready' && (
-          <Pressable style={styles.startButton} onPress={startStep}>
-            <Text style={styles.primaryButtonText}>
-              {hasTimer ? `Start (${currentStep?.timeMinutes} min)` : 'Done with this step'}
+        <Card style={styles.stepCard}>
+          <View style={styles.stepInner}>
+            <IconComponent size={48} />
+            <Text style={styles.stepInstruction}>{currentStep?.instruction}</Text>
+          </View>
+        </Card>
+
+        {hasTimer && cookState !== 'ready' && (
+          <Card variant="inset" style={styles.timerCard}>
+            <Text style={styles.timerDisplay}>{formatTimerDisplay(remaining)}</Text>
+          </Card>
+        )}
+
+        {displayColdOne && coldOneTime && cookState === 'cooking' && remindersEnabled && (
+          <View style={styles.coldOneRow}>
+            <BeerIcon size={24} />
+            <Text style={styles.coldOneTracker}>
+              Cold One #{displayColdOne}
             </Text>
-          </Pressable>
+          </View>
         )}
-        {cookState === 'cooking' && (
-          <Pressable style={styles.pauseButton} onPress={pauseTimer}>
-            <Text style={styles.primaryButtonText}>Pause</Text>
-          </Pressable>
-        )}
-        {cookState === 'paused' && (
-          <>
-            <Pressable style={styles.startButton} onPress={resumeTimer}>
-              <Text style={styles.primaryButtonText}>Resume</Text>
-            </Pressable>
-            <Pressable style={styles.skipButton} onPress={nextStep}>
-              <Text style={styles.secondaryButtonText}>Skip Step</Text>
-            </Pressable>
-          </>
-        )}
-        {cookState === 'step-done' && (
-          <Pressable style={styles.primaryButton} onPress={nextStep}>
-            <Text style={styles.primaryButtonText}>
-              {currentStepIndex < recipe.steps.length - 1 ? 'Next Step →' : 'Finish! 🎉'}
-            </Text>
-          </Pressable>
-        )}
+
+        <View style={styles.buttonContainer}>
+          {cookState === 'ready' && (
+            <Button
+              title={hasTimer ? `Start (${currentStep?.timeMinutes} min)` : 'Done with this step'}
+              variant="success"
+              onPress={startStep}
+            />
+          )}
+          {cookState === 'cooking' && (
+            <Button title="Pause" variant="primary" onPress={pauseTimer} />
+          )}
+          {cookState === 'paused' && (
+            <>
+              <Button title="Resume" variant="success" onPress={resumeTimer} />
+              <Button title="Skip Step" variant="secondary" onPress={nextStep} />
+            </>
+          )}
+          {cookState === 'step-done' && (
+            <Button
+              title={currentStepIndex < recipe.steps.length - 1 ? 'Next Step' : 'Finish!'}
+              onPress={nextStep}
+            />
+          )}
+        </View>
       </View>
-    </View>
+    </ScreenBackground>
   );
 }
 
@@ -247,104 +262,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
-    backgroundColor: colors.cream,
   },
-  quitButton: {
+  quitWrap: {
     position: 'absolute',
     top: spacing.md,
     right: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
   },
-  quitButtonText: {
-    color: colors.grayDark,
-    fontSize: fontSize.md,
-    fontWeight: '600',
+  quitButton: {
+    ...shadows.sm,
+  },
+  quitText: {
+    fontSize: fontSize.sm,
   },
   progressText: {
     fontSize: fontSize.md,
-    color: colors.grayDark,
+    color: colors.brownMedium,
+    fontWeight: '600',
     marginBottom: spacing.md,
   },
   stepCard: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: spacing.lg,
-    alignItems: 'center',
     width: '100%',
     marginBottom: spacing.xl,
-    borderWidth: 2,
-    borderColor: colors.amberLight,
   },
-  stepEmoji: {
-    fontSize: 48,
-    marginBottom: spacing.md,
+  stepInner: {
+    alignItems: 'center',
   },
   stepInstruction: {
     fontSize: fontSize.lg,
     color: colors.brown,
     textAlign: 'center',
     lineHeight: 28,
+    marginTop: spacing.md,
+  },
+  timerCard: {
+    width: '100%',
+    marginBottom: spacing.md,
+    alignItems: 'center',
   },
   timerDisplay: {
     fontSize: 64,
     fontWeight: 'bold',
     color: colors.brown,
     fontVariant: ['tabular-nums'],
-    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  coldOneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
   },
   coldOneTracker: {
     fontSize: fontSize.lg,
     color: colors.amber,
     fontWeight: 'bold',
-    marginBottom: spacing.xl,
   },
   buttonContainer: {
     width: '100%',
     gap: spacing.md,
   },
-  startButton: {
-    backgroundColor: colors.green,
-    paddingVertical: 18,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  pauseButton: {
-    backgroundColor: colors.amberDark,
-    paddingVertical: 18,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  primaryButton: {
-    backgroundColor: colors.amber,
-    paddingVertical: 18,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: colors.white,
-    fontSize: fontSize.lg,
-    fontWeight: 'bold',
-  },
-  skipButton: {
-    backgroundColor: colors.grayLight,
-    paddingVertical: 18,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: colors.grayDark,
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-  },
   heading: {
     fontSize: fontSize.xxl,
     fontWeight: 'bold',
     color: colors.brown,
+    marginTop: spacing.md,
     marginBottom: spacing.md,
   },
   subtext: {
@@ -353,14 +334,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.md,
   },
+  summaryCard: {
+    marginBottom: spacing.xl,
+    width: '100%',
+  },
+  summaryInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
   coldOneSummary: {
     fontSize: fontSize.xl,
     color: colors.amber,
     fontWeight: 'bold',
-    marginBottom: spacing.xl,
-  },
-  bigEmoji: {
-    fontSize: 100,
-    marginBottom: spacing.md,
   },
 });

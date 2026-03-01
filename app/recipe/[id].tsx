@@ -1,9 +1,14 @@
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { colors, spacing, fontSize } from '../../src/theme';
+import { colors, spacing, fontSize, shadows } from '../../src/theme';
 import { getColdOneTime, formatColdOnes, toColdOnes } from '../../src/utils/storage';
 import { recipes } from '../../src/data/recipes';
+import { recipeIconMap, BeerIcon } from '../../src/components/icons/RecipeIcons';
+import ScreenBackground from '../../src/components/ScreenBackground';
+import Card from '../../src/components/Card';
+import Button from '../../src/components/Button';
+import SectionHeader from '../../src/components/SectionHeader';
 
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -20,104 +25,113 @@ export default function RecipeDetailScreen() {
 
   if (!recipe) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.heading}>Recipe not found</Text>
-      </View>
+      <ScreenBackground>
+        <View style={styles.centerContainer}>
+          <Text style={styles.heading}>Recipe not found</Text>
+        </View>
+      </ScreenBackground>
     );
   }
 
+  const IconComponent = recipeIconMap[recipe.icon] || BeerIcon;
   const totalColdOnes = coldOneTime
     ? toColdOnes(recipe.totalTimeMinutes, coldOneTime)
     : null;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.emoji}>{recipe.imageEmoji}</Text>
-      <Text style={styles.heading}>{recipe.name}</Text>
-      <Text style={styles.description}>{recipe.description}</Text>
-
-      <View style={styles.timeCard}>
-        <View style={styles.timeItem}>
-          <Text style={styles.timeLabel}>Total Time</Text>
-          <Text style={styles.timeValue}>{recipe.totalTimeMinutes} min</Text>
+    <ScreenBackground>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.headerArea}>
+          <IconComponent size={80} />
+          <Text style={styles.heading}>{recipe.name}</Text>
+          <Text style={styles.description}>{recipe.description}</Text>
         </View>
-        {totalColdOnes !== null && (
-          <View style={styles.timeItem}>
-            <Text style={styles.timeLabel}>In Cold Ones</Text>
-            <Text style={styles.timeValueCold}>🍺 {formatColdOnes(totalColdOnes)}</Text>
-          </View>
-        )}
-      </View>
 
-      <Text style={styles.stepsTitle}>Steps</Text>
-      {recipe.steps.map((step, index) => (
-        <View key={index} style={styles.stepCard}>
-          <View style={styles.stepNumber}>
-            <Text style={styles.stepNumberText}>{index + 1}</Text>
-          </View>
-          <View style={styles.stepContent}>
-            <Text style={styles.stepInstruction}>{step.instruction}</Text>
-            {step.timeMinutes !== undefined && (
-              <Text style={styles.stepTime}>
-                ⏱️ {step.timeMinutes} min
-                {coldOneTime &&
-                  ` · 🍺 ${formatColdOnes(toColdOnes(step.timeMinutes, coldOneTime))}`}
-              </Text>
+        <Card style={styles.timeCard}>
+          <View style={styles.timeRow}>
+            <View style={styles.timeItem}>
+              <Text style={styles.timeLabel}>Total Time</Text>
+              <Text style={styles.timeValue}>{recipe.totalTimeMinutes} min</Text>
+            </View>
+            {totalColdOnes !== null && (
+              <View style={styles.timeItem}>
+                <Text style={styles.timeLabel}>In Cold Ones</Text>
+                <Text style={styles.timeValueCold}>{formatColdOnes(totalColdOnes)}</Text>
+              </View>
             )}
           </View>
-        </View>
-      ))}
+        </Card>
 
-      <Pressable
-        style={styles.grillButton}
-        onPress={() =>
-          router.push({
-            pathname: '/cook-timer',
-            params: { recipeId: recipe.id },
-          })
-        }
-      >
-        <Text style={styles.grillButtonText}>🔥 Start Grilling</Text>
-      </Pressable>
-    </ScrollView>
+        <SectionHeader title="Steps" />
+
+        {recipe.steps.map((step, index) => (
+          <Card key={index} style={styles.stepCard}>
+            <View style={styles.stepRow}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>{index + 1}</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepInstruction}>{step.instruction}</Text>
+                {step.timeMinutes !== undefined && (
+                  <Text style={styles.stepTime}>
+                    {step.timeMinutes} min
+                    {coldOneTime &&
+                      ` · ${formatColdOnes(toColdOnes(step.timeMinutes, coldOneTime))}`}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </Card>
+        ))}
+
+        <Button
+          title="Start Grilling"
+          variant="dark"
+          onPress={() =>
+            router.push({
+              pathname: '/cook-timer',
+              params: { recipeId: recipe.id },
+            })
+          }
+          style={styles.grillButton}
+        />
+      </ScrollView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  centerContainer: {
     flex: 1,
-    backgroundColor: colors.cream,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     padding: spacing.lg,
-    alignItems: 'center',
+    paddingBottom: spacing.xxl,
   },
-  emoji: {
-    fontSize: 80,
-    marginBottom: spacing.md,
+  headerArea: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
   },
   heading: {
     fontSize: fontSize.xxl,
     fontWeight: 'bold',
     color: colors.brown,
     textAlign: 'center',
+    marginTop: spacing.md,
   },
   description: {
     fontSize: fontSize.md,
     color: colors.grayDark,
     textAlign: 'center',
-    marginBottom: spacing.lg,
     marginTop: spacing.xs,
   },
   timeCard: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: spacing.md,
-    flexDirection: 'row',
-    width: '100%',
-    borderWidth: 1,
-    borderColor: colors.grayLight,
     marginBottom: spacing.lg,
+  },
+  timeRow: {
+    flexDirection: 'row',
   },
   timeItem: {
     flex: 1,
@@ -138,31 +152,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.amber,
   },
-  stepsTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: 'bold',
-    color: colors.brown,
-    alignSelf: 'flex-start',
-    marginBottom: spacing.md,
-  },
   stepCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: spacing.md,
-    width: '100%',
     marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.grayLight,
+  },
+  stepRow: {
+    flexDirection: 'row',
   },
   stepNumber: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.amber,
+    backgroundColor: colors.amberDark,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    ...shadows.sm,
   },
   stepNumberText: {
     color: colors.white,
@@ -184,18 +188,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   grillButton: {
-    backgroundColor: colors.brown,
-    paddingVertical: 18,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 14,
-    alignItems: 'center',
-    width: '100%',
     marginTop: spacing.lg,
-    marginBottom: spacing.xxl,
-  },
-  grillButtonText: {
-    color: colors.amber,
-    fontSize: fontSize.xl,
-    fontWeight: 'bold',
   },
 });
