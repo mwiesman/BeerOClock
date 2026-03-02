@@ -117,6 +117,12 @@ export default function SettingsScreen() {
               );
             })}
           </View>
+          <Button
+            title="Pour One Out"
+            variant="primary"
+            onPress={() => router.push('/')}
+            style={styles.pourButton}
+          />
         </Card>
 
         <SectionHeader title="About" />
@@ -217,6 +223,9 @@ const styles = StyleSheet.create({
   },
   glassOptionDescSelected: {
     color: colors.amberDark,
+  },
+  pourButton: {
+    marginTop: spacing.md,
   },
   dedicationCard: {
     marginTop: spacing.sm,

@@ -12,15 +12,15 @@ const STREAM_HEIGHT = SCREEN_HEIGHT * 0.45;
 const NUM_BUBBLES = 8;
 
 // Physics tuning
+const POUR_TILT_THRESHOLD = 0.4;
 const SMOOTHING_FACTOR = 0.82;
-const MAX_POUR_RATE = 0.014;
+const MAX_POUR_RATE = 0.008;
 const TILT_TO_ROTATION_DEG = 25;
-const OVERFLOW_POUR_SCALE = 0.0003; // pour rate per pixel of overflow
 
 type ContainerType = 'pint' | 'mug' | 'bottle' | 'can';
 const ALL_CONTAINERS: ContainerType[] = ['pint', 'mug', 'bottle', 'can'];
 
-// Container dimensions (hoisted for physics calculations)
+// Container dimensions
 const PINT_WIDTH = 140;
 const PINT_HEIGHT = 220;
 const MUG_WIDTH = 130;
@@ -33,16 +33,6 @@ const BTL_NECK_H = 70;
 const CAN_W = 100;
 const CAN_H = 190;
 
-// Each container's inner fill dimensions for iBeer-style rim physics
-// width: how wide the liquid body is (determines surface angle rise)
-// innerHeight: max fill height inside the container
-const CONTAINER_PHYSICS: Record<ContainerType, { width: number; innerHeight: number }> = {
-  pint: { width: PINT_WIDTH - 6, innerHeight: PINT_HEIGHT - 20 },
-  mug: { width: MUG_WIDTH - 6, innerHeight: MUG_HEIGHT - 20 },
-  bottle: { width: BTL_BODY_W - 4, innerHeight: BTL_BODY_H - 14 },
-  can: { width: CAN_W - 8, innerHeight: CAN_H - 10 },
-};
-
 export default function PourScreen() {
   const router = useRouter();
   const [fillLevel, setFillLevel] = useState(0);
@@ -50,8 +40,6 @@ export default function PourScreen() {
   const [smoothedTilt, setSmoothedTilt] = useState(0);
   const [container, setContainer] = useState<ContainerType>('pint');
   const smoothedRef = useRef(0);
-  const phaseRef = useRef(phase);
-  phaseRef.current = phase;
 
   useEffect(() => {
     getGlassStyle().then((pref) => {
@@ -63,9 +51,14 @@ export default function PourScreen() {
     });
   }, []);
 
-  // Phase 1: Auto-fill
+  // Phase 1: Auto-fill (bottle/can start full — they're sealed containers)
   useEffect(() => {
     if (phase !== 'filling') return;
+    if (container === 'bottle' || container === 'can') {
+      setFillLevel(1);
+      setPhase('ready');
+      return;
+    }
     const interval = setInterval(() => {
       setFillLevel((prev) => {
         const next = prev + 0.012;
@@ -78,53 +71,40 @@ export default function PourScreen() {
       });
     }, 30);
     return () => clearInterval(interval);
-  }, [phase]);
+  }, [phase, container]);
 
-  // Phase 2 & 3: Accelerometer with iBeer-style rim-overflow physics
-  // Liquid surface stays level relative to gravity. It only pours when
-  // the angled surface rises past the container rim on the tilting side.
-  // Uses phaseRef to avoid re-subscribing on every phase change.
+  // Phase 2 & 3: Accelerometer with low-pass filter
   useEffect(() => {
     if (phase !== 'ready' && phase !== 'pouring') return;
 
-    const physics = CONTAINER_PHYSICS[container];
     Accelerometer.setUpdateInterval(33);
     const subscription = Accelerometer.addListener(({ x }) => {
-      const currentPhase = phaseRef.current;
-      if (currentPhase !== 'ready' && currentPhase !== 'pouring') return;
-
       const newSmoothed = smoothedRef.current * SMOOTHING_FACTOR + x * (1 - SMOOTHING_FACTOR);
       smoothedRef.current = newSmoothed;
       setSmoothedTilt(newSmoothed);
 
-      const visualTiltDeg = Math.max(-TILT_TO_ROTATION_DEG, Math.min(TILT_TO_ROTATION_DEG, newSmoothed * 30));
-      const tiltRad = (Math.abs(visualTiltDeg) * Math.PI) / 180;
-      const surfaceRise = (physics.width / 2) * Math.tan(tiltRad);
+      const absTilt = Math.abs(newSmoothed);
 
-      setFillLevel((prev) => {
-        const fillHeight = prev * physics.innerHeight;
-        const pourSideHeight = fillHeight + surfaceRise;
-        const overflow = pourSideHeight - physics.innerHeight;
+      if (absTilt > POUR_TILT_THRESHOLD) {
+        const tiltExcess = absTilt - POUR_TILT_THRESHOLD;
+        const pourRate = Math.min(tiltExcess * tiltExcess * 0.04, MAX_POUR_RATE);
 
-        if (overflow > 0) {
-          const pourRate = Math.min(overflow * OVERFLOW_POUR_SCALE, MAX_POUR_RATE);
-          setPhase('pouring');
+        setPhase('pouring');
+        setFillLevel((prev) => {
           const next = prev - pourRate;
           if (next <= 0) {
             setPhase('done');
             return 0;
           }
           return next;
-        } else {
-          if (phaseRef.current === 'pouring') setPhase('ready');
-          return prev;
-        }
-      });
+        });
+      } else if (absTilt < POUR_TILT_THRESHOLD * 0.7) {
+        if (phase === 'pouring') setPhase('ready');
+      }
     });
 
     return () => subscription.remove();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [container]);
+  }, [phase]);
 
   // Phase 4: Navigate home
   useEffect(() => {
@@ -336,77 +316,79 @@ function PourStream({ streamWidth, fillLevel, pouringRight, containerType }: Pou
   );
 }
 
-// ─── Shared: Sloshing Beer Fill + Foam ───────────────────
-// Counter-rotates the fill so liquid stays level relative to gravity.
-// Foam is integrated into the fill as one unified body — the foam top
-// naturally reaches the rim on the pour side when tilted (iBeer style).
-interface BeerFillProps {
-  fillHeight: number;
-  tiltDeg: number;
-  containerWidth: number;
-  containerHeight: number;
-}
-
-function BeerFill({ fillHeight, tiltDeg, containerWidth, containerHeight }: BeerFillProps) {
-  const liquidRotation = -tiltDeg * 1.8;
-  const extraSide = 80;
-  // Clip to container height so the angled surface visually touches the rim
-  const clipHeight = Math.min(fillHeight, containerHeight);
+// ─── Shared: Beer Fill + Foam ─────────────────────────────
+// The entire fill rotates as one piece inside a clip container.
+// Uses a gradient that goes from amber to TRANSPARENT at the top —
+// so when it rotates, the angled boundary between beer and empty is visible.
+function BeerFill({ fillHeight, tiltDeg, containerWidth }: { fillHeight: number; tiltDeg: number; containerWidth: number }) {
+  if (fillHeight <= 0) return null;
+  const liquidRotation = -tiltDeg * 1.5;
+  const extraSide = 100;
 
   return (
-    // Non-rotating clip container — bounded to container height, hides corners
+    // Clip container — overflow hidden, sized to full container interior
+    // so the rotating fill's angled edge is visible
     <View style={{
       position: 'absolute',
       bottom: 0,
       left: 0,
       right: 0,
-      height: clipHeight,
+      height: fillHeight + 40,
       overflow: 'hidden',
     }}>
-      {/* Rotating fill — the angled surface rises to rim on pour side */}
+      {/* Rotating fill — the sharp top edge of the gradient IS the liquid surface */}
       <View style={{
         position: 'absolute',
         bottom: -extraSide,
         left: -extraSide,
         right: -extraSide,
-        height: clipHeight + extraSide * 2,
+        height: fillHeight + extraSide,
         transform: [{ rotate: `${liquidRotation}deg` }],
       }}>
         <LinearGradient
           colors={[colors.amberLight, colors.amber, colors.amberDark]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
           style={{
             position: 'absolute',
             bottom: 0,
             left: 0,
             right: 0,
-            height: clipHeight + extraSide * 2,
+            height: fillHeight + extraSide,
           }}
         />
-        {/* Foam band — sits on top of the liquid, rotates with it */}
-        {fillHeight > 8 && (
-          <View style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 14,
-            backgroundColor: colors.creamDark,
-            opacity: 0.85,
-          }} />
-        )}
       </View>
     </View>
   );
 }
 
+// Foam head — rotates on top of the fill at the same rate.
+function FoamHead({ fillHeight, tiltDeg }: { fillHeight: number; tiltDeg: number }) {
+  if (fillHeight <= 8) return null;
+  const foamRotation = -tiltDeg * 1.5;
+  return (
+    <View style={{
+      position: 'absolute',
+      left: -10,
+      right: -10,
+      height: 16,
+      bottom: fillHeight - 4,
+      backgroundColor: colors.creamDark,
+      borderRadius: 8,
+      opacity: 0.9,
+      transform: [{ rotate: `${foamRotation}deg` }],
+    }} />
+  );
+}
+
 // ─── Pint Glass ──────────────────────────────────────────
 function PintGlass({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number }) {
-  const innerH = PINT_HEIGHT - 20;
-  const fillHeight = fillLevel * innerH;
+  const fillHeight = fillLevel * (PINT_HEIGHT - 20);
   return (
     <View style={{ alignItems: 'center' }}>
       <View style={pintStyles.body}>
-        <BeerFill fillHeight={fillHeight} tiltDeg={tiltDeg} containerWidth={PINT_WIDTH} containerHeight={innerH} />
+        <BeerFill fillHeight={fillHeight} tiltDeg={tiltDeg} containerWidth={PINT_WIDTH} />
+        <FoamHead fillHeight={fillHeight} tiltDeg={tiltDeg} />
         <View style={pintStyles.shine} />
         <View style={pintStyles.shineWide} />
       </View>
@@ -417,13 +399,13 @@ function PintGlass({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number 
 
 // ─── Frosty Mug ──────────────────────────────────────────
 function FrostyMug({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number }) {
-  const innerH = MUG_HEIGHT - 20;
-  const fillHeight = fillLevel * innerH;
+  const fillHeight = fillLevel * (MUG_HEIGHT - 20);
   return (
     <View style={{ alignItems: 'center' }}>
       <View style={mugStyles.bodyRow}>
         <View style={mugStyles.body}>
-          <BeerFill fillHeight={fillHeight} tiltDeg={tiltDeg} containerWidth={MUG_WIDTH} containerHeight={innerH} />
+          <BeerFill fillHeight={fillHeight} tiltDeg={tiltDeg} containerWidth={MUG_WIDTH} />
+          <FoamHead fillHeight={fillHeight} tiltDeg={tiltDeg} />
           <View style={mugStyles.shine} />
           <View style={[mugStyles.frost, { top: 8, left: 15 }]} />
           <View style={[mugStyles.frost, { top: 20, left: 40 }]} />
@@ -442,30 +424,18 @@ function FrostyMug({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number 
 function BeerBottle({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number }) {
   const innerH = BTL_BODY_H - 14;
   const bodyFill = Math.min(fillLevel * 1.2, 1) * innerH;
-  const neckFill = fillLevel > 0.85 ? (fillLevel - 0.85) / 0.15 * (BTL_NECK_H - 20) : 0;
 
   return (
     <View style={{ alignItems: 'center' }}>
       {/* Cap */}
       <View style={btlStyles.cap} />
-      {/* Neck */}
+      {/* Neck — narrow tube connecting to body */}
       <View style={btlStyles.neck}>
-        {neckFill > 0 && (
-          <View style={[btlStyles.neckFill, {
-            height: neckFill,
-            transform: [{ rotate: `${-tiltDeg}deg` }],
-            left: -5, right: -5,
-          }]} />
-        )}
         <View style={btlStyles.neckShine} />
       </View>
-      {/* Shoulder — curved taper from neck to body */}
-      <View style={btlStyles.shoulder}>
-        <View style={btlStyles.shoulderInner} />
-      </View>
-      {/* Body */}
+      {/* Body — includes the flared top that widens from neck */}
       <View style={btlStyles.body}>
-        <BeerFill fillHeight={bodyFill} tiltDeg={tiltDeg} containerWidth={BTL_BODY_W} containerHeight={innerH} />
+        <BeerFill fillHeight={bodyFill} tiltDeg={tiltDeg} containerWidth={BTL_BODY_W} />
         <View style={btlStyles.bodyShine} />
         {/* Label */}
         <View style={btlStyles.label}>
@@ -694,45 +664,26 @@ const mugStyles = StyleSheet.create({
 // ─── Beer Bottle Styles ──────────────────────────────────
 const btlStyles = StyleSheet.create({
   cap: {
-    width: 20, height: 8, borderRadius: 3,
+    width: 22, height: 10, borderRadius: 3,
     backgroundColor: 'rgba(255,255,255,0.3)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+    marginBottom: -1,
   },
   neck: {
-    width: BTL_NECK_W, height: BTL_NECK_H,
+    width: BTL_NECK_W, height: 50,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
-    borderTopWidth: 0,
-    overflow: 'hidden',
+    borderTopWidth: 0, borderBottomWidth: 0,
     backgroundColor: 'rgba(255,255,255,0.03)',
-  },
-  neckFill: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: colors.amber, opacity: 0.8,
   },
   neckShine: {
     position: 'absolute', top: 5, left: 5, width: 2, height: '70%',
     backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 1,
   },
-  shoulder: {
-    width: BTL_BODY_W,
-    height: 22,
-    overflow: 'hidden',
-    marginTop: -1,
-  },
-  shoulderInner: {
-    width: BTL_BODY_W,
-    height: BTL_BODY_W,
-    borderRadius: BTL_BODY_W / 2,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.18)',
-    borderTopWidth: 0,
-    marginTop: -(BTL_BODY_W - 22),
-  },
   body: {
     width: BTL_BODY_W, height: BTL_BODY_H,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
-    borderTopWidth: 0, borderBottomLeftRadius: 8, borderBottomRightRadius: 8,
+    borderTopLeftRadius: BTL_BODY_W / 2, borderTopRightRadius: BTL_BODY_W / 2,
+    borderBottomLeftRadius: 8, borderBottomRightRadius: 8,
     overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.03)',
   },
