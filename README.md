@@ -169,7 +169,6 @@ App store assets should be dropped into:
 
 ### Growth
 - [ ] User accounts & cloud sync
-- [ ] Social features / leaderboards
 - [ ] Community recipe sharing
 - [ ] Integration with smart grills / thermometers
 
