@@ -12,12 +12,14 @@ Beer O'Clock is a cross-platform mobile app that translates cooking times into "
 
 ## Features
 
-- **"Pour One Out" Splash** — Watch a beer glass fill up, then tilt your phone to pour one out before entering the app
+- **"Pour One Out" Splash** — iBeer-style accelerometer animation. Watch a beer fill up, then tilt your phone to pour one out. Liquid and foam tilt with your phone.
+- **Glass Styles** — Choose pint glass, frosty mug, bottle, or can (or let it randomize each time)
 - **Time a Cold One** — Stopwatch or manual entry to calibrate your personal Cold One unit
 - **Recipe Library** — 10 built-in grilling recipes with cook times shown in minutes and Cold Ones
 - **Step-by-Step Cook Timer** — Guided cooking with timers for each step
 - **Cold One Reminders** — Get alerted every time a Cold One passes while cooking (carries across recipe steps, so the count never resets mid-cook)
-- **Settings** — Toggle reminders on/off, recalibrate your Cold One time
+- **Skeuomorphic Design** — iPod Touch era aesthetic with glossy gradient buttons, embossed cards, warm textures, and custom recipe icons (no emoji in UI)
+- **Settings** — Glass style picker, reminders toggle, Pour One Out shortcut, recalibrate
 
 ## Tech Stack
 
@@ -26,6 +28,8 @@ Beer O'Clock is a cross-platform mobile app that translates cooking times into "
 - **TypeScript** throughout
 - **AsyncStorage** for local data persistence
 - **expo-sensors** for accelerometer (pour animation)
+- **expo-linear-gradient** for skeuomorphic gradients
+- **Jest 29** + **jest-expo** + **React Native Testing Library** for testing
 
 ## Getting Started
 
@@ -56,6 +60,13 @@ pnpm start:lan
 pnpm run ios
 pnpm run android
 pnpm run web
+
+# Run tests
+pnpm test
+pnpm test:watch
+
+# Type check
+pnpm exec tsc --noEmit
 ```
 
 Scan the QR code with Expo Go (Android) or the Camera app (iOS).
@@ -71,20 +82,31 @@ Scan the QR code with Expo Go (Android) or the Camera app (iOS).
 ## Project Structure
 
 ```
-app/                        # Screens (Expo Router file-based routing)
-  _layout.tsx               # Root navigation layout & header config
-  index.tsx                 # "Pour One Out" splash screen (entry point)
-  home.tsx                  # Home screen — Cold One status, navigation
-  timer.tsx                 # Beer timing / calibration (stopwatch + manual)
-  recipes.tsx               # Recipe list with Cold One conversions
-  recipe/[id].tsx           # Recipe detail with steps
-  cook-timer.tsx            # Active cooking timer with step progression
-  settings.tsx              # Settings, reminders toggle, dedication
+app/                          # Screens (Expo Router file-based routing)
+  _layout.tsx                 # Root navigation layout & header config
+  index.tsx                   # "Pour One Out" splash (accelerometer pour)
+  home.tsx                    # Home screen — Cold One status, navigation
+  timer.tsx                   # Beer timing / calibration (stopwatch + manual)
+  recipes.tsx                 # Recipe list with Cold One conversions
+  recipe/[id].tsx             # Recipe detail with steps
+  cook-timer.tsx              # Active cooking timer with step progression
+  settings.tsx                # Glass style, reminders, dedication
 
 src/
-  data/recipes.ts           # Built-in recipe data (10 grilling recipes)
-  utils/storage.ts          # AsyncStorage helpers, time formatting, Cold One math
-  theme.ts                  # Design tokens — colors, spacing, typography
+  components/                 # Reusable UI components
+    Button.tsx                # Glossy gradient button (5 variants)
+    Card.tsx                  # Embossed card (raised/inset/dark)
+    ScreenBackground.tsx      # Textured cream background wrapper
+    GlossyIcon.tsx            # iPod Touch-style icon container
+    SectionHeader.tsx         # Styled section headers
+    icons/RecipeIcons.tsx     # 10 custom recipe icons (no emoji)
+  data/
+    recipes.ts                # 10 built-in grilling recipes
+    __tests__/recipes.test.ts # Recipe data integrity tests
+  utils/
+    storage.ts                # AsyncStorage helpers, formatting, Cold One math
+    __tests__/storage.test.ts # Storage utility tests (27 tests)
+  theme.ts                    # Colors, shadows, gradients, spacing, typography
 ```
 
 ## How It Works
@@ -95,38 +117,49 @@ src/
 4. **Grill** — Tap "Start Grilling" on any recipe for a step-by-step guided timer.
 5. **Drink** — Cold One reminders carry across steps. If step 1 is 4 min and your Cold One is 5 min, you'll get reminded 1 min into step 2.
 
+## Design System
+
+The app uses a **skeuomorphic craft** aesthetic inspired by iPod Touch era iOS — textured, tactile, warm depth. Every surface has physicality.
+
+- Glossy gradient buttons with pressed states
+- Embossed cards with warm brown-tinted shadows
+- Textured cream backgrounds
+- Custom View-based recipe icons (no emoji in UI)
+- Warm amber/brown palette inspired by craft beer labels
+
+Full design system rules are documented in `CLAUDE.md`.
+
 ## Art & Assets
 
-Currently using emoji as placeholder art. Custom artwork should be dropped into:
+App store assets should be dropped into:
 
 - `assets/icon.png` — App icon (1024x1024)
 - `assets/splash-icon.png` — Splash screen graphic
 - `assets/favicon.png` — Web favicon
 
-Recipe and UI art can be added by replacing emoji references in:
-- `src/data/recipes.ts` — `imageEmoji` field on each recipe (replace with image component)
-- Individual screens — emoji used as decorative headers
+## Roadmap
 
-The visual style targets a warm amber/brown palette inspired by craft beer labels (similar to Untappd's aesthetic), with a nod to the original iPod Touch era — clean, tactile, slightly skeuomorphic.
-
-## Turning This Into a Real App (Next Steps)
-
-### Phase 1: Polish (current)
-- [ ] Replace emoji with custom pixel art / illustrations
+### Polish
+- [ ] Polish bottle neck-to-body shape
 - [ ] Add haptic feedback on button presses
-- [ ] Improve pour animation with proper physics
 - [ ] Add sound effects (pour, timer ding, crack open)
-- [ ] Dark mode support
+- [ ] Expo SDK 55 upgrade (went stable late Feb 2026)
 
-### Phase 2: Features
+### More Tests
+- [ ] Component tests with React Native Testing Library
+- [ ] Cook timer logic tests
+- [ ] Navigation integration tests
+
+### Features
 - [ ] Custom recipe creation
-- [ ] Import recipes from URL
+- [ ] More built-in recipes (expand beyond 10)
 - [ ] Push notifications for background timers
 - [ ] Cold One history / stats tracking
 - [ ] Share your Cold One time with friends
+- [ ] Dark mode support
 
-### Phase 3: Ship to App Stores
-- [ ] Create an Expo Application Services (EAS) account: `pnpm exec eas login`
+### Ship to App Stores
+- [ ] Create an EAS account: `pnpm exec eas login`
 - [ ] Configure EAS Build: `pnpm exec eas build:configure`
 - [ ] Build for iOS: `pnpm exec eas build --platform ios`
 - [ ] Build for Android: `pnpm exec eas build --platform android`
@@ -134,7 +167,7 @@ The visual style targets a warm amber/brown palette inspired by craft beer label
 - [ ] Submit to Google Play: `pnpm exec eas submit --platform android`
 - [ ] Set up OTA updates: `pnpm exec eas update`
 
-### Phase 4: Growth
+### Growth
 - [ ] User accounts & cloud sync
 - [ ] Social features / leaderboards
 - [ ] Community recipe sharing
