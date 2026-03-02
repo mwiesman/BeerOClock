@@ -6,7 +6,7 @@ Beer O'Clock is a cross-platform mobile app that translates cooking times into "
 
 *"That brisket? That's about 45 Cold Ones."*
 
-> Dedicated to Jim O'Connor. This one's for you.
+> For to Jim O
 
 ---
 
