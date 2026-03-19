@@ -139,38 +139,38 @@ App store assets should be dropped into:
 
 ## Roadmap
 
-### Polish
-- [ ] Polish bottle neck-to-body shape
-- [ ] Add haptic feedback on button presses
-- [ ] Add sound effects (pour, timer ding, crack open)
-- [ ] Expo SDK 55 upgrade (went stable late Feb 2026)
+### v1.0 — Publish-Ready
+- [ ] Fix pour liquid physics (liquid angles/sloshes toward pour side, not vertical drain)
+- [ ] Fix container shape artifacts (bottle neck junction, audit all 4 containers)
+- [ ] Add "Buy Me a Cold One" tip jar in Settings (IAP: $1.99 / $4.99 / $9.99)
+- [ ] Configure EAS Build (`eas.json`, app icon, splash, metadata)
+- [ ] Create privacy policy page
+- [ ] Set up Google Play Console ($25) and submit build
+- [ ] Verify/renew Apple Developer account, submit to App Store
 
-### More Tests
+### v1.1 — First Update
+- [ ] Custom recipe creation (add/edit/delete user recipes)
+- [ ] Sound effects (`expo-av`: pour, crack open, timer ding)
+- [ ] Haptic feedback (`expo-haptics`: button presses, timer alerts)
+- [ ] Push notifications for background cook timers (`expo-notifications`)
+
+### v1.2+ — Growth & Monetization
+- [ ] Expand to 20-25 built-in recipes with category filtering
+- [ ] "Beer O'Clock Pro" cosmetic IAP: custom container skins, themes, pour sounds
+- [ ] Dark mode (system preference + manual toggle)
+- [ ] Ads (AdMob or direct brewery sponsorship, only if 10k+ MAU)
+- [ ] Expo SDK 55 upgrade
+
+### Future Ideas
+- [ ] Cold One history / stats tracking
+- [ ] Share your Cold One time (social card image)
+- [ ] Smart grill / thermometer integration
+- [ ] User accounts & cloud sync
+
+### Tests (Ongoing)
 - [ ] Component tests with React Native Testing Library
 - [ ] Cook timer logic tests
 - [ ] Navigation integration tests
-
-### Features
-- [ ] Custom recipe creation
-- [ ] More built-in recipes (expand beyond 10)
-- [ ] Push notifications for background timers
-- [ ] Cold One history / stats tracking
-- [ ] Share your Cold One time with friends
-- [ ] Dark mode support
-
-### Ship to App Stores
-- [ ] Create an EAS account: `pnpm exec eas login`
-- [ ] Configure EAS Build: `pnpm exec eas build:configure`
-- [ ] Build for iOS: `pnpm exec eas build --platform ios`
-- [ ] Build for Android: `pnpm exec eas build --platform android`
-- [ ] Submit to App Store: `pnpm exec eas submit --platform ios`
-- [ ] Submit to Google Play: `pnpm exec eas submit --platform android`
-- [ ] Set up OTA updates: `pnpm exec eas update`
-
-### Growth
-- [ ] User accounts & cloud sync
-- [ ] Community recipe sharing
-- [ ] Integration with smart grills / thermometers
 
 ## Development Notes
 
