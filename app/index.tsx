@@ -317,26 +317,45 @@ function PourStream({ streamWidth, fillLevel, pouringRight, containerType }: Pou
 }
 
 // ─── Shared: Beer Fill + Foam ─────────────────────────────
-// The entire fill rotates as one piece inside a clip container.
-// Uses a gradient that goes from amber to TRANSPARENT at the top —
-// so when it rotates, the angled boundary between beer and empty is visible.
-function BeerFill({ fillHeight, tiltDeg, containerWidth }: { fillHeight: number; tiltDeg: number; containerWidth: number }) {
-  if (fillHeight <= 0) return null;
-  const liquidRotation = -tiltDeg * 1.5;
-  const extraSide = 100;
+// Liquid surface tilts opposite to the container rotation (counter-rotation)
+// to simulate gravity keeping the liquid level. At lower fill levels the
+// surface angle is more dramatic — less liquid means more visible slosh.
+function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight }: {
+  fillLevel: number;
+  tiltDeg: number;
+  containerWidth: number;
+  containerHeight: number;
+}) {
+  if (fillLevel <= 0) return null;
+
+  const fillHeight = fillLevel * containerHeight;
+
+  // Counter-rotate to oppose the container tilt (since BeerFill is a child
+  // of the rotated wrapper, negative tilt here cancels the container rotation
+  // and then adds extra tilt so liquid sloshes toward the pour side).
+  // Scale up the tilt at lower fill levels — less liquid = more dramatic slosh.
+  const tiltScale = 1.0 + (1.0 - fillLevel) * 0.8;
+  const liquidRotation = -tiltDeg * tiltScale;
+
+  // Extra padding so the rotated rectangle covers the full container width
+  // even at maximum rotation angles. Needs to be generous.
+  const extraSide = containerWidth * 0.8;
+
+  // The clip window is slightly taller than the fill to allow the tilted
+  // surface edge to be visible without cutting off early.
+  const clipPadding = containerWidth * 0.4;
 
   return (
-    // Clip container — overflow hidden, sized to full container interior
-    // so the rotating fill's angled edge is visible
     <View style={{
       position: 'absolute',
       bottom: 0,
       left: 0,
       right: 0,
-      height: fillHeight + 40,
+      height: Math.min(fillHeight + clipPadding, containerHeight),
       overflow: 'hidden',
     }}>
-      {/* Rotating fill — the sharp top edge of the gradient IS the liquid surface */}
+      {/* Rotating fill block — its flat top edge IS the liquid surface.
+          The rotation pivots around the center, creating the angled surface. */}
       <View style={{
         position: 'absolute',
         bottom: -extraSide,
@@ -362,20 +381,34 @@ function BeerFill({ fillHeight, tiltDeg, containerWidth }: { fillHeight: number;
   );
 }
 
-// Foam head — rotates on top of the fill at the same rate.
-function FoamHead({ fillHeight, tiltDeg }: { fillHeight: number; tiltDeg: number }) {
-  if (fillHeight <= 8) return null;
-  const foamRotation = -tiltDeg * 1.5;
+// Foam head — follows the tilted liquid surface and scales down as liquid empties.
+// Uses the same tilt math as BeerFill so it stays aligned with the liquid surface.
+function FoamHead({ fillLevel, tiltDeg, containerHeight }: {
+  fillLevel: number;
+  tiltDeg: number;
+  containerHeight: number;
+}) {
+  if (fillLevel <= 0.04) return null;
+
+  const fillHeight = fillLevel * containerHeight;
+
+  // Match BeerFill's counter-rotation exactly
+  const tiltScale = 1.0 + (1.0 - fillLevel) * 0.8;
+  const foamRotation = -tiltDeg * tiltScale;
+
+  // Foam height scales with fill level: full = 16px, nearly empty = 4px
+  const foamHeight = 4 + fillLevel * 12;
+
   return (
     <View style={{
       position: 'absolute',
       left: -10,
       right: -10,
-      height: 16,
-      bottom: fillHeight - 4,
+      height: foamHeight,
+      bottom: fillHeight - foamHeight * 0.3,
       backgroundColor: colors.creamDark,
-      borderRadius: 8,
-      opacity: 0.9,
+      borderRadius: foamHeight / 2,
+      opacity: 0.7 + fillLevel * 0.2,
       transform: [{ rotate: `${foamRotation}deg` }],
     }} />
   );
@@ -383,12 +416,12 @@ function FoamHead({ fillHeight, tiltDeg }: { fillHeight: number; tiltDeg: number
 
 // ─── Pint Glass ──────────────────────────────────────────
 function PintGlass({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number }) {
-  const fillHeight = fillLevel * (PINT_HEIGHT - 20);
+  const innerHeight = PINT_HEIGHT - 20;
   return (
     <View style={{ alignItems: 'center' }}>
       <View style={pintStyles.body}>
-        <BeerFill fillHeight={fillHeight} tiltDeg={tiltDeg} containerWidth={PINT_WIDTH} />
-        <FoamHead fillHeight={fillHeight} tiltDeg={tiltDeg} />
+        <BeerFill fillLevel={fillLevel} tiltDeg={tiltDeg} containerWidth={PINT_WIDTH} containerHeight={innerHeight} />
+        <FoamHead fillLevel={fillLevel} tiltDeg={tiltDeg} containerHeight={innerHeight} />
         <View style={pintStyles.shine} />
         <View style={pintStyles.shineWide} />
       </View>
@@ -399,13 +432,13 @@ function PintGlass({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number 
 
 // ─── Frosty Mug ──────────────────────────────────────────
 function FrostyMug({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number }) {
-  const fillHeight = fillLevel * (MUG_HEIGHT - 20);
+  const innerHeight = MUG_HEIGHT - 20;
   return (
     <View style={{ alignItems: 'center' }}>
       <View style={mugStyles.bodyRow}>
         <View style={mugStyles.body}>
-          <BeerFill fillHeight={fillHeight} tiltDeg={tiltDeg} containerWidth={MUG_WIDTH} />
-          <FoamHead fillHeight={fillHeight} tiltDeg={tiltDeg} />
+          <BeerFill fillLevel={fillLevel} tiltDeg={tiltDeg} containerWidth={MUG_WIDTH} containerHeight={innerHeight} />
+          <FoamHead fillLevel={fillLevel} tiltDeg={tiltDeg} containerHeight={innerHeight} />
           <View style={mugStyles.shine} />
           <View style={[mugStyles.frost, { top: 8, left: 15 }]} />
           <View style={[mugStyles.frost, { top: 20, left: 40 }]} />
@@ -423,7 +456,8 @@ function FrostyMug({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number 
 // ─── Beer Bottle ─────────────────────────────────────────
 function BeerBottle({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number }) {
   const innerH = BTL_BODY_H - 14;
-  const bodyFill = Math.min(fillLevel * 1.2, 1) * innerH;
+  // Bottle fill level maps fillLevel -> body fill (capped at 1.0 for the body portion)
+  const bodyFillLevel = Math.min(fillLevel * 1.2, 1);
 
   return (
     <View style={{ alignItems: 'center' }}>
@@ -435,7 +469,7 @@ function BeerBottle({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number
       </View>
       {/* Body — includes the flared top that widens from neck */}
       <View style={btlStyles.body}>
-        <BeerFill fillHeight={bodyFill} tiltDeg={tiltDeg} containerWidth={BTL_BODY_W} />
+        <BeerFill fillLevel={bodyFillLevel} tiltDeg={tiltDeg} containerWidth={BTL_BODY_W} containerHeight={innerH} />
         <View style={btlStyles.bodyShine} />
         {/* Label */}
         <View style={btlStyles.label}>
