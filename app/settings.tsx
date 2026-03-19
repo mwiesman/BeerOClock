@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Switch, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Switch, Pressable, Alert } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { colors, spacing, fontSize, shadows, emboss } from '../src/theme';
 import {
@@ -16,6 +16,7 @@ import Card from '../src/components/Card';
 import Button from '../src/components/Button';
 import SectionHeader from '../src/components/SectionHeader';
 import { BeerIcon } from '../src/components/icons/RecipeIcons';
+import { TIP_PRODUCT_IDS, TIP_DISPLAY, purchaseTip, isIAPAvailable, TipProductId } from '../src/utils/iap';
 
 const GLASS_OPTIONS: { value: GlassStyle; label: string; desc: string }[] = [
   { value: 'random', label: 'Random', desc: 'Surprise me' },
@@ -47,6 +48,15 @@ export default function SettingsScreen() {
   const selectGlass = async (style: GlassStyle) => {
     setGlassStyle(style);
     await saveGlassStyle(style);
+  };
+
+  const handleTip = async (productId: TipProductId) => {
+    if (!isIAPAvailable()) {
+      Alert.alert('Coming Soon', 'Tip jar coming soon! Thanks for the thought.');
+      return;
+    }
+    const result = await purchaseTip(productId);
+    Alert.alert(result.success ? 'Cheers!' : 'Oops', result.message);
   };
 
   return (
@@ -131,6 +141,32 @@ export default function SettingsScreen() {
           <View>
             <Text style={styles.rowLabel}>Beer O'Clock v1.0.0</Text>
             <Text style={styles.rowHint}>Cooking time, measured in Cold Ones</Text>
+          </View>
+        </Card>
+
+        <SectionHeader title="Support" />
+
+        <Card style={styles.row}>
+          <Text style={styles.supportText}>
+            Enjoying Beer O'Clock? Buy me a Cold One!
+          </Text>
+          <View style={styles.tipRow}>
+            {TIP_PRODUCT_IDS.map((id) => {
+              const tip = TIP_DISPLAY[id];
+              return (
+                <View key={id} style={styles.tipOption}>
+                  <Text style={styles.tipName}>{tip.name}</Text>
+                  <Button
+                    title={tip.price}
+                    variant="primary"
+                    onPress={() => handleTip(id)}
+                    style={styles.tipButton}
+                    textStyle={styles.tipButtonText}
+                  />
+                  <Text style={styles.tipDesc}>{tip.description}</Text>
+                </View>
+              );
+            })}
           </View>
         </Card>
 
@@ -226,6 +262,39 @@ const styles = StyleSheet.create({
   },
   pourButton: {
     marginTop: spacing.md,
+  },
+  supportText: {
+    fontSize: fontSize.md,
+    color: colors.brown,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  tipRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  tipOption: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  tipName: {
+    fontSize: fontSize.sm,
+    fontWeight: 'bold' as const,
+    color: colors.brown,
+    textAlign: 'center',
+  },
+  tipDesc: {
+    fontSize: 12,
+    color: colors.brownMedium,
+    textAlign: 'center',
+  },
+  tipButton: {
+    ...shadows.sm,
+  },
+  tipButtonText: {
+    fontSize: fontSize.sm,
   },
   dedicationCard: {
     marginTop: spacing.sm,
