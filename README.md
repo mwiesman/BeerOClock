@@ -140,11 +140,18 @@ App store assets should be dropped into:
 ## Roadmap
 
 ### v1.0 — Publish-Ready
-- [ ] Fix pour liquid physics (liquid angles/sloshes toward pour side, not vertical drain)
-- [ ] Fix container shape artifacts (bottle neck junction, audit all 4 containers)
-- [ ] Add "Buy Me a Cold One" tip jar in Settings (IAP: $1.99 / $4.99 / $9.99)
-- [ ] Configure EAS Build (`eas.json`, app icon, splash, metadata)
-- [ ] Create privacy policy page
+- [x] Fix pour liquid physics (fill-level-dependent tilt scaling, foam tracking)
+- [x] Fix container shape artifacts (bottle shoulder taper, can rim gaps)
+- [x] Fix pour stream (outward arc + taper from rim)
+- [x] Add "Buy Me a Cold One" tip jar in Settings (IAP: $1.99 / $4.99 / $9.99)
+- [x] Configure EAS Build (`eas.json`, app icon, splash, metadata)
+- [x] Create privacy policy + store listing docs
+- [ ] Test pour animation changes on device (visual verification)
+- [ ] Install `react-native-iap` and replace purchase stub (requires EAS build)
+- [ ] Create tip products in Google Play Console (`tip_cold_one`, `tip_six_pack`, `tip_case`)
+- [ ] Replace placeholder contact email in privacy policy
+- [ ] Wire up `android-icon-foreground.png` in `app.json`
+- [ ] Capture screenshots for store listings
 - [ ] Set up Google Play Console ($25) and submit build
 - [ ] Verify/renew Apple Developer account, submit to App Store
 
