@@ -12,10 +12,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.beeroclock.app"
+      "bundleIdentifier": "com.beeroclock.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSMotionUsageDescription": "Beer O'Clock uses motion sensors for the Pour One Out animation."
+      }
     },
     "android": {
       "package": "com.beeroclock.app",
+      "versionCode": 1,
+      "permissions": ["com.android.vending.BILLING"],
       "adaptiveIcon": {
         "backgroundColor": "#451A03"
       }
