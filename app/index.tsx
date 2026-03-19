@@ -320,6 +320,13 @@ function PourStream({ streamWidth, fillLevel, pouringRight, containerType }: Pou
 // Liquid surface tilts opposite to the container rotation (counter-rotation)
 // to simulate gravity keeping the liquid level. At lower fill levels the
 // surface angle is more dramatic — less liquid means more visible slosh.
+
+/** Scale up tilt at lower fill levels — less liquid = more dramatic slosh. */
+function liquidTiltDeg(fillLevel: number, tiltDeg: number): number {
+  const tiltScale = 1.0 + (1.0 - fillLevel) * 0.8;
+  return -tiltDeg * tiltScale;
+}
+
 function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight }: {
   fillLevel: number;
   tiltDeg: number;
@@ -333,9 +340,7 @@ function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight }: {
   // Counter-rotate to oppose the container tilt (since BeerFill is a child
   // of the rotated wrapper, negative tilt here cancels the container rotation
   // and then adds extra tilt so liquid sloshes toward the pour side).
-  // Scale up the tilt at lower fill levels — less liquid = more dramatic slosh.
-  const tiltScale = 1.0 + (1.0 - fillLevel) * 0.8;
-  const liquidRotation = -tiltDeg * tiltScale;
+  const liquidRotation = liquidTiltDeg(fillLevel, tiltDeg);
 
   // Extra padding so the rotated rectangle covers the full container width
   // even at maximum rotation angles. Needs to be generous.
@@ -393,8 +398,7 @@ function FoamHead({ fillLevel, tiltDeg, containerHeight }: {
   const fillHeight = fillLevel * containerHeight;
 
   // Match BeerFill's counter-rotation exactly
-  const tiltScale = 1.0 + (1.0 - fillLevel) * 0.8;
-  const foamRotation = -tiltDeg * tiltScale;
+  const foamRotation = liquidTiltDeg(fillLevel, tiltDeg);
 
   // Foam height scales with fill level: full = 16px, nearly empty = 4px
   const foamHeight = 4 + fillLevel * 12;
@@ -470,6 +474,7 @@ function BeerBottle({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number
       {/* Body — includes the flared top that widens from neck */}
       <View style={btlStyles.body}>
         <BeerFill fillLevel={bodyFillLevel} tiltDeg={tiltDeg} containerWidth={BTL_BODY_W} containerHeight={innerH} />
+        <FoamHead fillLevel={bodyFillLevel} tiltDeg={tiltDeg} containerHeight={innerH} />
         <View style={btlStyles.bodyShine} />
         {/* Label */}
         <View style={btlStyles.label}>
