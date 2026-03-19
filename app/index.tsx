@@ -471,7 +471,9 @@ function BeerBottle({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number
       <View style={btlStyles.neck}>
         <View style={btlStyles.neckShine} />
       </View>
-      {/* Body — includes the flared top that widens from neck */}
+      {/* Shoulder — smooth taper from neck width to body width */}
+      <View style={btlStyles.shoulder} />
+      {/* Body */}
       <View style={btlStyles.body}>
         <BeerFill fillLevel={bodyFillLevel} tiltDeg={tiltDeg} containerWidth={BTL_BODY_W} containerHeight={innerH} />
         <FoamHead fillLevel={bodyFillLevel} tiltDeg={tiltDeg} containerHeight={innerH} />
@@ -711,17 +713,29 @@ const btlStyles = StyleSheet.create({
   neck: {
     width: BTL_NECK_W, height: 50,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
-    borderTopWidth: 0, borderBottomWidth: 0,
+    borderTopWidth: 0,
+    borderBottomWidth: 0,
     backgroundColor: 'rgba(255,255,255,0.03)',
+    marginBottom: -1,
   },
   neckShine: {
     position: 'absolute', top: 5, left: 5, width: 2, height: '70%',
     backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 1,
   },
+  shoulder: {
+    width: BTL_BODY_W, height: 24,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
+    borderTopWidth: 0, borderBottomWidth: 0,
+    borderTopLeftRadius: BTL_BODY_W / 2,
+    borderTopRightRadius: BTL_BODY_W / 2,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    marginBottom: -1,
+  },
   body: {
     width: BTL_BODY_W, height: BTL_BODY_H,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
-    borderTopLeftRadius: BTL_BODY_W / 2, borderTopRightRadius: BTL_BODY_W / 2,
+    borderTopWidth: 0,
+    borderTopLeftRadius: 0, borderTopRightRadius: 0,
     borderBottomLeftRadius: 8, borderBottomRightRadius: 8,
     overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.03)',
@@ -780,6 +794,7 @@ const canStyles = StyleSheet.create({
     width: CAN_W - 10, height: 6,
     backgroundColor: 'rgba(180,180,180,0.5)',
     borderTopLeftRadius: 3, borderTopRightRadius: 3,
+    marginBottom: -1,
   },
   body: {
     width: CAN_W, height: CAN_H,
@@ -829,5 +844,6 @@ const canStyles = StyleSheet.create({
     width: CAN_W - 10, height: 6,
     backgroundColor: 'rgba(180,180,180,0.5)',
     borderBottomLeftRadius: 3, borderBottomRightRadius: 3,
+    marginTop: -1,
   },
 });
