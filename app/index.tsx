@@ -240,13 +240,31 @@ function PourStream({ streamWidth, fillLevel, pouringRight, containerType }: Pou
 
   const streamOpacity = 0.55 + fillLevel * 0.4;
 
+  // Outward offset: push the stream a few pixels outside the container rim
+  const outwardOffset = containerType === 'bottle' ? 4 : 6;
+  const sidePos = rimConfig.side - outwardOffset;
+
+  // Outward rotation: stream arcs away from the container (degrees)
+  const arcAngle = containerType === 'bottle' ? 6 : 8;
+  const rotateDeg = pouringRight ? arcAngle : -arcAngle;
+
+  // Taper: stream is wider at top, narrower at bottom
+  const topWidth = streamWidth * 1.15;
+  const bottomWidth = streamWidth * 0.55;
+
   return (
     <View
       style={[
         streamStyles.container,
         pouringRight
-          ? { right: rimConfig.side, top: rimConfig.top }
-          : { left: rimConfig.side, top: rimConfig.top },
+          ? { right: sidePos, top: rimConfig.top }
+          : { left: sidePos, top: rimConfig.top },
+        {
+          transform: [
+            { rotate: `${rotateDeg}deg` },
+          ],
+          transformOrigin: 'top center',
+        },
       ]}
     >
       {/* Spill curve at rim — sized to match the container opening */}
@@ -257,13 +275,23 @@ function PourStream({ streamWidth, fillLevel, pouringRight, containerType }: Pou
         opacity: streamOpacity,
       }]} />
 
-      {/* Main stream body — gradient for depth */}
-      <LinearGradient
-        colors={[colors.amberLight, colors.amber, colors.amberDark]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={[streamStyles.body, { width: streamWidth, opacity: streamOpacity }]}
-      />
+      {/* Main stream body — gradient for depth, tapered from wide top to narrow bottom */}
+      <View style={[streamStyles.body, { opacity: streamOpacity, overflow: 'hidden' as const }]}>
+        <LinearGradient
+          colors={[colors.amberLight, colors.amber, colors.amberDark]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={{
+            width: topWidth,
+            height: STREAM_HEIGHT - 10,
+            borderTopLeftRadius: topWidth / 2,
+            borderTopRightRadius: topWidth / 2,
+            borderBottomLeftRadius: bottomWidth / 2,
+            borderBottomRightRadius: bottomWidth / 2,
+            alignSelf: 'center',
+          }}
+        />
+      </View>
 
       {/* Light reflection on stream */}
       <View
@@ -602,7 +630,7 @@ const streamStyles = StyleSheet.create({
   },
   body: {
     height: STREAM_HEIGHT - 10,
-    borderRadius: 10,
+    alignItems: 'center',
   },
   streamHighlight: {
     position: 'absolute',
