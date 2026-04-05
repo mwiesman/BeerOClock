@@ -138,8 +138,9 @@ export default function PourScreen() {
         {phase === 'done' && 'One poured out. Cheers.'}
       </Text>
 
-      <View style={styles.pourScene}>
-        {/* Pour stream — OUTSIDE the rotating wrapper so it falls with gravity */}
+      <View style={[styles.glassWrapper, { transform: [{ rotate: `${tiltDeg}deg` }] }]}>
+        {/* Pour stream — inside rotating wrapper for correct rim positioning,
+            but counter-rotated so it falls straight down with gravity */}
         {isPouring && (
           <PourStream
             streamWidth={streamWidth}
@@ -150,9 +151,7 @@ export default function PourScreen() {
           />
         )}
 
-        <View style={[styles.glassWrapper, { transform: [{ rotate: `${tiltDeg}deg` }] }]}>
-          <ContainerComponent fillLevel={fillLevel} tiltDeg={tiltDeg} />
-        </View>
+        <ContainerComponent fillLevel={fillLevel} tiltDeg={tiltDeg} />
       </View>
 
       {/* Splash puddle with foam */}
@@ -218,67 +217,53 @@ function PourStream({ streamWidth, fillLevel, pouringRight, containerType, tiltD
     return () => animations.forEach((a) => a.stop());
   }, [bubbleAnims]);
 
-  // Container widths for calculating rim position in screen-space
-  // Since the stream is OUTSIDE the rotating glass wrapper, we calculate
-  // where the rim ends up after rotation using trig.
-  const containerWidths: Record<ContainerType, number> = {
-    pint: PINT_WIDTH,
-    mug: MUG_WIDTH + MUG_HANDLE_W,
-    bottle: BTL_BODY_W,
-    can: CAN_W,
-  };
-  const containerW = containerWidths[containerType];
+  // Position stream at the rim — each container has different opening location
+  // side: distance from container edge to stream origin
+  // top: vertical offset (negative = above container top)
+  // spillSize: width of the spill blob at the rim
+  const rimConfig = {
+    pint: { side: -2, top: 0, spillSize: streamWidth + 10 },
+    mug: pouringRight
+      ? { side: MUG_HANDLE_W - 4, top: 0, spillSize: streamWidth + 10 }
+      : { side: -2, top: 0, spillSize: streamWidth + 10 },
+    bottle: {
+      side: (BTL_BODY_W - BTL_NECK_W) / 2 + 2,
+      top: 0,
+      spillSize: streamWidth + 4,
+    },
+    can: { side: 2, top: -11, spillSize: streamWidth + 6 },
+  }[containerType];
 
-  // How far the rim is from center of the container (half-width for open containers)
-  const rimHalfWidth: Record<ContainerType, number> = {
-    pint: PINT_WIDTH / 2,
-    mug: pouringRight ? MUG_WIDTH / 2 : MUG_WIDTH / 2,
-    bottle: BTL_NECK_W / 2 + 2, // narrow neck opening
-    can: (CAN_W - 10) / 2, // top rim is narrower than body
-  };
-  const rimDist = rimHalfWidth[containerType];
-
-  // Convert tilt to radians for trig
-  const tiltRad = (tiltDeg * Math.PI) / 180;
-
-  // The rim moves horizontally and vertically when the glass rotates.
-  // Horizontal: rim pushes outward by rimDist * cos(tilt) (already mostly there)
-  // Vertical: rim drops/rises by rimDist * sin(tilt)
-  const rimHorizontalOffset = rimDist * Math.cos(Math.abs(tiltRad)) + 4;
-  const rimVerticalOffset = rimDist * Math.sin(Math.abs(tiltRad));
-
-  const spillSize = containerType === 'bottle' ? streamWidth + 4 : streamWidth + 10;
   const streamOpacity = 0.55 + fillLevel * 0.4;
 
   // Taper: stream is wider at top, narrower at bottom
   const topWidth = streamWidth * 1.15;
   const bottomWidth = streamWidth * 0.55;
 
-  // Small arc angle — liquid leaves the lip with slight outward momentum
-  const arcAngle = containerType === 'bottle' ? 4 : 6;
-  const rotateDeg = pouringRight ? arcAngle : -arcAngle;
+  // Counter-rotate to cancel the glass wrapper's rotation, so the stream
+  // falls straight down with gravity. Add a small arc angle for natural
+  // outward momentum as liquid leaves the lip.
+  const arcAngle = pouringRight ? 5 : -5;
+  const counterRotation = -tiltDeg + arcAngle;
 
   return (
     <View
       style={[
         streamStyles.container,
+        pouringRight
+          ? { right: rimConfig.side, top: rimConfig.top }
+          : { left: rimConfig.side, top: rimConfig.top },
         {
-          // Position at the rim's screen-space location
-          // Horizontally: offset from center of pourScene
-          [pouringRight ? 'right' : 'left']:
-            (containerW / 2) - rimHorizontalOffset - streamWidth / 2,
-          // Vertically: shifted down by how much the rim drops when rotated
-          top: rimVerticalOffset,
-          transform: [{ rotate: `${rotateDeg}deg` }],
+          transform: [{ rotate: `${counterRotation}deg` }],
           transformOrigin: 'top center',
         },
       ]}
     >
       {/* Spill curve at rim — sized to match the container opening */}
       <View style={[streamStyles.spillCurve, {
-        width: spillSize,
+        width: rimConfig.spillSize,
         height: 10,
-        borderRadius: spillSize / 2,
+        borderRadius: rimConfig.spillSize / 2,
         opacity: streamOpacity,
       }]} />
 
@@ -601,12 +586,9 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
-  pourScene: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
   glassWrapper: {
     alignItems: 'center',
+    marginBottom: spacing.xl,
   },
   puddleWrap: {
     alignItems: 'center',
