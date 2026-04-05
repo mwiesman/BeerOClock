@@ -462,56 +462,42 @@ function FrostyMug({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number 
 
 // ─── Beer Bottle ─────────────────────────────────────────
 function BeerBottle({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number }) {
-  const innerH = BTL_BODY_H - 14;
-  // Bottle fill level maps fillLevel -> body fill (capped at 1.0 for the body portion)
-  const bodyFillLevel = Math.min(fillLevel * 1.2, 1);
-
-  // When tilted, liquid should visually climb into the neck/shoulder.
-  // Show neck liquid when fill level is high enough and there's significant tilt.
-  const tiltAmount = Math.abs(tiltDeg) / TILT_TO_ROTATION_DEG; // 0 to 1
-  const neckFillOpacity = Math.min(1, bodyFillLevel * tiltAmount * 1.5);
-  const shoulderFillOpacity = Math.min(1, bodyFillLevel * tiltAmount * 2);
+  // Total interior height: neck(50) + shoulder(24) + body(160) = 234
+  // BeerFill spans the entire interior so liquid is one continuous body
+  // that naturally climbs into the neck when tilted.
+  const neckH = 50;
+  const shoulderH = 24;
+  const totalInteriorH = neckH + shoulderH + BTL_BODY_H;
 
   return (
     <View style={{ alignItems: 'center' }}>
       {/* Cap */}
       <View style={btlStyles.cap} />
-      {/* Neck — narrow tube connecting to body */}
-      <View style={[btlStyles.neck, { overflow: 'hidden' as const }]}>
-        {/* Liquid climbing into neck when tilted */}
-        {neckFillOpacity > 0.05 && (
-          <View style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            height: neckFillOpacity * 50,
-            backgroundColor: colors.amber,
-            opacity: neckFillOpacity * 0.8,
-          }} />
-        )}
-        <View style={btlStyles.neckShine} />
-      </View>
-      {/* Shoulder — smooth taper from neck width to body width */}
-      <View style={[btlStyles.shoulder, { overflow: 'hidden' as const }]}>
-        {/* Liquid filling shoulder when tilted */}
-        {shoulderFillOpacity > 0.05 && (
-          <View style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            height: shoulderFillOpacity * 24,
-            backgroundColor: colors.amber,
-            opacity: shoulderFillOpacity * 0.85,
-          }} />
-        )}
-      </View>
-      {/* Body */}
-      <View style={btlStyles.body}>
-        <BeerFill fillLevel={bodyFillLevel} tiltDeg={tiltDeg} containerWidth={BTL_BODY_W} containerHeight={innerH} />
-        <View style={btlStyles.bodyShine} />
-        {/* Label */}
-        <View style={btlStyles.label}>
-          <View style={btlStyles.labelBorder}>
-            <Text style={btlStyles.labelBrand}>O'CLOCK</Text>
-            <Text style={btlStyles.labelSub}>BREWING CO.</Text>
-            <View style={btlStyles.labelLine} />
-            <Text style={btlStyles.labelType}>LAGER</Text>
+      {/* Unified liquid container: neck + shoulder + body share one BeerFill */}
+      <View style={btlStyles.bottleInterior}>
+        {/* One continuous BeerFill spanning the entire bottle interior */}
+        <BeerFill
+          fillLevel={fillLevel}
+          tiltDeg={tiltDeg}
+          containerWidth={BTL_BODY_W}
+          containerHeight={totalInteriorH}
+        />
+        {/* Neck outline — just borders, no separate fill */}
+        <View style={btlStyles.neckOverlay}>
+          <View style={btlStyles.neckShine} />
+        </View>
+        {/* Shoulder outline */}
+        <View style={btlStyles.shoulderOverlay} />
+        {/* Body outline + label + shine */}
+        <View style={btlStyles.bodyOverlay}>
+          <View style={btlStyles.bodyShine} />
+          <View style={btlStyles.label}>
+            <View style={btlStyles.labelBorder}>
+              <Text style={btlStyles.labelBrand}>O'CLOCK</Text>
+              <Text style={btlStyles.labelSub}>BREWING CO.</Text>
+              <View style={btlStyles.labelLine} />
+              <Text style={btlStyles.labelType}>LAGER</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -737,34 +723,43 @@ const btlStyles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
     marginBottom: -1,
   },
-  neck: {
+  // Unified container for neck + shoulder + body — one BeerFill fills this
+  bottleInterior: {
+    width: BTL_BODY_W,
+    height: 50 + 24 + BTL_BODY_H, // neck + shoulder + body
+    overflow: 'hidden',
+    alignItems: 'center',
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  // Neck, shoulder, body are now overlays (just borders/shape, no fill)
+  neckOverlay: {
+    position: 'absolute', top: 0,
     width: BTL_NECK_W, height: 50,
+    alignSelf: 'center',
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
-    borderTopWidth: 0,
-    borderBottomWidth: 0,
+    borderTopWidth: 0, borderBottomWidth: 0,
     backgroundColor: 'rgba(255,255,255,0.03)',
-    marginBottom: -1,
   },
   neckShine: {
     position: 'absolute', top: 5, left: 5, width: 2, height: '70%',
     backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 1,
   },
-  shoulder: {
+  shoulderOverlay: {
+    position: 'absolute', top: 50,
     width: BTL_BODY_W, height: 24,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
     borderTopWidth: 0, borderBottomWidth: 0,
     borderTopLeftRadius: BTL_BODY_W / 2,
     borderTopRightRadius: BTL_BODY_W / 2,
     backgroundColor: 'rgba(255,255,255,0.03)',
-    marginBottom: -1,
   },
-  body: {
+  bodyOverlay: {
+    position: 'absolute', top: 50 + 24,
     width: BTL_BODY_W, height: BTL_BODY_H,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
     borderTopWidth: 0,
-    borderTopLeftRadius: 0, borderTopRightRadius: 0,
     borderBottomLeftRadius: 8, borderBottomRightRadius: 8,
-    overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.03)',
   },
   bodyShine: {
