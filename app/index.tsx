@@ -8,7 +8,7 @@ import { getGlassStyle } from '../src/utils/storage';
 import Button from '../src/components/Button';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const STREAM_HEIGHT = SCREEN_HEIGHT * 0.45;
+const STREAM_HEIGHT = SCREEN_HEIGHT * 0.28;
 const NUM_BUBBLES = 8;
 
 // Physics tuning
@@ -120,7 +120,9 @@ export default function PourScreen() {
   const pouringRight = smoothedTilt > 0;
 
   const pourIntensity = Math.max(0, Math.abs(smoothedTilt) - 0.3);
-  const streamWidth = Math.max(8, Math.min(20, 8 + pourIntensity * 30));
+  // Stream gets thinner and shorter as container empties — natural taper-off
+  const fillScale = Math.min(1, fillLevel * 5); // 1.0 above 20% fill, tapers to 0
+  const streamWidth = Math.max(4, Math.min(20, 8 + pourIntensity * 30) * fillScale);
 
   const ContainerComponent = CONTAINER_COMPONENTS[container];
 
@@ -145,6 +147,7 @@ export default function PourScreen() {
           <PourStream
             streamWidth={streamWidth}
             fillLevel={fillLevel}
+            fillScale={fillScale}
             pouringRight={pouringRight}
             containerType={container}
             tiltDeg={tiltDeg}
@@ -187,12 +190,13 @@ export default function PourScreen() {
 interface PourStreamProps {
   streamWidth: number;
   fillLevel: number;
+  fillScale: number;
   pouringRight: boolean;
   containerType: ContainerType;
   tiltDeg: number;
 }
 
-function PourStream({ streamWidth, fillLevel, pouringRight, containerType, tiltDeg }: PourStreamProps) {
+function PourStream({ streamWidth, fillLevel, fillScale, pouringRight, containerType, tiltDeg }: PourStreamProps) {
   const bubbleAnims = useRef<Animated.Value[]>(
     Array.from({ length: NUM_BUBBLES }, () => new Animated.Value(Math.random()))
   ).current;
@@ -234,7 +238,8 @@ function PourStream({ streamWidth, fillLevel, pouringRight, containerType, tiltD
     can: { side: 2, top: -11, spillSize: streamWidth + 6 },
   }[containerType];
 
-  const streamOpacity = 0.55 + fillLevel * 0.4;
+  const streamOpacity = (0.55 + fillLevel * 0.4) * fillScale;
+  const scaledStreamHeight = STREAM_HEIGHT * fillScale;
 
   // Taper: stream is wider at top, narrower at bottom
   const topWidth = streamWidth * 1.15;
@@ -250,6 +255,7 @@ function PourStream({ streamWidth, fillLevel, pouringRight, containerType, tiltD
     <View
       style={[
         streamStyles.container,
+        { height: scaledStreamHeight },
         pouringRight
           ? { right: rimConfig.side, top: rimConfig.top }
           : { left: rimConfig.side, top: rimConfig.top },
@@ -268,14 +274,14 @@ function PourStream({ streamWidth, fillLevel, pouringRight, containerType, tiltD
       }]} />
 
       {/* Main stream body — gradient for depth, tapered from wide top to narrow bottom */}
-      <View style={[streamStyles.body, { opacity: streamOpacity, overflow: 'hidden' as const }]}>
+      <View style={[streamStyles.body, { height: scaledStreamHeight - 10, opacity: streamOpacity, overflow: 'hidden' as const }]}>
         <LinearGradient
           colors={[colors.amberLight, colors.amber, colors.amberDark]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={{
             width: topWidth,
-            height: STREAM_HEIGHT - 10,
+            height: scaledStreamHeight - 10,
             borderTopLeftRadius: topWidth / 2,
             borderTopRightRadius: topWidth / 2,
             borderBottomLeftRadius: bottomWidth / 2,
@@ -289,6 +295,7 @@ function PourStream({ streamWidth, fillLevel, pouringRight, containerType, tiltD
       <View
         style={[streamStyles.streamHighlight, {
           width: Math.max(2, streamWidth * 0.25),
+          height: scaledStreamHeight - 40,
           left: pouringRight ? 2 : undefined,
           right: pouringRight ? undefined : 2,
           opacity: streamOpacity * 0.4,
@@ -341,12 +348,6 @@ function PourStream({ streamWidth, fillLevel, pouringRight, containerType, tiltD
 // to simulate gravity keeping the liquid level. At lower fill levels the
 // surface angle is more dramatic — less liquid means more visible slosh.
 
-/** Scale up tilt at lower fill levels — less liquid = more dramatic slosh. */
-function liquidTiltDeg(fillLevel: number, tiltDeg: number): number {
-  const tiltScale = 1.0 + (1.0 - fillLevel) * 0.8;
-  return -tiltDeg * tiltScale;
-}
-
 function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight }: {
   fillLevel: number;
   tiltDeg: number;
@@ -356,69 +357,108 @@ function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight }: {
   if (fillLevel <= 0) return null;
 
   const fillHeight = fillLevel * containerHeight;
-
-  // Counter-rotate to oppose the container tilt (since BeerFill is a child
-  // of the rotated wrapper, negative tilt here cancels the container rotation
-  // and then adds extra tilt so liquid sloshes toward the pour side).
-  const liquidRotation = liquidTiltDeg(fillLevel, tiltDeg);
-
-  // Extra padding so the rotated rectangle covers the full container width
-  // even at maximum rotation angles. Needs to be generous.
-  const extraSide = containerWidth * 0.8;
-
-  // The clip window is slightly taller than the fill to allow the tilted
-  // surface edge to be visible without cutting off early. When tilted more,
-  // allow extra height so the liquid's high side can visually reach the rim.
   const tiltFactor = Math.abs(tiltDeg) / TILT_TO_ROTATION_DEG; // 0 to 1
-  const clipPadding = containerWidth * (0.4 + tiltFactor * 0.3);
-
-  // Foam band height scales with fill level: full = 16px, nearly empty = 4px
+  const pourRight = tiltDeg > 0;
   const foamHeight = 4 + fillLevel * 12;
+
+  // Smooth blend from flat (0) to fully tilted (1).
+  // Ramps from 0.05 to 0.35 tilt so there's no sudden snap.
+  const tiltBlend = Math.min(1, Math.max(0, (tiltFactor - 0.05) / 0.3));
+
+  // Tilted targets: pour side at rim, non-pour side drops
+  const highTarget = containerHeight;
+  const lowTarget = Math.max(0, 2 * fillHeight - containerHeight);
+
+  // Smoothly interpolate between flat and tilted
+  const highSide = fillHeight + tiltBlend * (highTarget - fillHeight);
+  const lowSide = fillHeight - tiltBlend * (fillHeight - lowTarget);
+  const triangleH = highSide - lowSide;
+
+  // Triangle width: full width when lowSide > 0 (fill >= 50%).
+  // Below 50% fill, narrow the triangle to conserve volume — the liquid
+  // gathers in the pour-side corner as it drains.
+  // Smooth transition as lowSide approaches 0.
+  const narrowW = Math.max(8, 2 * fillLevel * containerWidth);
+  const widthBlend = Math.min(1, lowSide / 20); // smooth over 20px
+  const triangleW = narrowW + widthBlend * (containerWidth - narrowW);
 
   return (
     <View style={{
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: Math.min(fillHeight + clipPadding, containerHeight),
+      position: 'absolute', bottom: 0, left: 0, right: 0,
+      height: containerHeight,
       overflow: 'hidden',
     }}>
-      {/* Rotating fill block — its flat top edge IS the liquid surface.
-          The rotation pivots around the center, creating the angled surface.
-          Foam is rendered inside so it always sits on the liquid surface. */}
-      <View style={{
-        position: 'absolute',
-        bottom: -extraSide,
-        left: -extraSide,
-        right: -extraSide,
-        height: fillHeight + extraSide,
-        transform: [{ rotate: `${liquidRotation}deg` }],
-      }}>
-        {/* Foam band at the very top of the liquid */}
-        <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: foamHeight,
-          backgroundColor: colors.creamDark,
-          opacity: 0.7 + fillLevel * 0.2,
-        }} />
-        {/* Beer gradient below the foam */}
+      {/* Base liquid — gradient goes dark at bottom to amber at top so
+          the top edge matches the triangle color = no visible seam */}
+      {lowSide > 1 && (
         <LinearGradient
-          colors={[colors.amberLight, colors.amber, colors.amberDark]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
+          colors={[colors.amberDark, colors.amber]}
+          start={{ x: 0, y: 1 }}
+          end={{ x: 0, y: 0 }}
           style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: fillHeight + extraSide - foamHeight,
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            height: lowSide,
           }}
         />
-      </View>
+      )}
+
+      {/* Foam — rendered BEHIND liquid triangle so only the surface band shows.
+          Thicker foam with warm cream color at high opacity. */}
+      {triangleH > 2 && tiltBlend > 0.1 && (
+        <View
+          style={{
+            position: 'absolute',
+            top: containerHeight - highSide - foamHeight * 2.5,
+            ...(pourRight ? { right: 0 } : { left: 0 }),
+            width: 0,
+            height: 0,
+            backgroundColor: 'transparent',
+            borderStyle: 'solid',
+            borderBottomWidth: triangleH + foamHeight * 2.5,
+            borderBottomColor: '#FFF8E1',
+            ...(pourRight
+              ? { borderLeftWidth: triangleW, borderLeftColor: 'transparent' }
+              : { borderRightWidth: triangleW, borderRightColor: 'transparent' }
+            ),
+            opacity: Math.min(0.92, 0.9 * tiltBlend),
+          }}
+        />
+      )}
+
+      {/* Angled surface — triangle from lowSide to highSide on pour side.
+          Width narrows below 50% fill as liquid gathers in pour corner. */}
+      {triangleH > 2 && (
+        <View
+          style={{
+            position: 'absolute',
+            top: containerHeight - highSide,
+            ...(pourRight ? { right: 0 } : { left: 0 }),
+            width: 0,
+            height: 0,
+            backgroundColor: 'transparent',
+            borderStyle: 'solid',
+            borderBottomWidth: triangleH,
+            borderBottomColor: colors.amber,
+            ...(pourRight
+              ? { borderLeftWidth: triangleW, borderLeftColor: 'transparent' }
+              : { borderRightWidth: triangleW, borderRightColor: 'transparent' }
+            ),
+          }}
+        />
+      )}
+
+      {/* Foam band — flat on top of liquid when upright, crossfades out as
+          the diagonal foam triangle takes over during tilt */}
+      {fillHeight > foamHeight && (
+        <View style={{
+          position: 'absolute',
+          bottom: fillHeight - foamHeight,
+          left: 0, right: 0,
+          height: foamHeight,
+          backgroundColor: '#FFF8E1',
+          opacity: (0.8 + fillLevel * 0.2) * Math.max(0, 1 - tiltBlend * 1.5),
+        }} />
+      )}
     </View>
   );
 }
@@ -605,7 +645,6 @@ const styles = StyleSheet.create({
 const streamStyles = StyleSheet.create({
   container: {
     position: 'absolute',
-    height: STREAM_HEIGHT,
     alignItems: 'center',
     zIndex: 10,
   },
@@ -614,13 +653,11 @@ const streamStyles = StyleSheet.create({
     marginBottom: -3,
   },
   body: {
-    height: STREAM_HEIGHT - 10,
     alignItems: 'center',
   },
   streamHighlight: {
     position: 'absolute',
     top: 14,
-    height: STREAM_HEIGHT - 40,
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 4,
   },
