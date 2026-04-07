@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Switch, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Switch, Pressable, Alert, ScrollView } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { colors, spacing, fontSize, shadows, emboss } from '../src/theme';
 import {
@@ -61,7 +61,7 @@ export default function SettingsScreen() {
 
   return (
     <ScreenBackground>
-      <View style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         <SectionHeader title="Cold One" />
 
         <Card style={styles.row}>
@@ -178,7 +178,7 @@ export default function SettingsScreen() {
             </Text>
           </View>
         </Card>
-      </View>
+      </ScrollView>
     </ScreenBackground>
   );
 }
@@ -186,7 +186,10 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentContainer: {
     padding: spacing.md,
+    paddingBottom: spacing.xl,
   },
   row: {
     marginBottom: spacing.sm,

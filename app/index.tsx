@@ -98,7 +98,7 @@ export default function PourScreen() {
           return next;
         });
       } else if (absTilt < POUR_TILT_THRESHOLD * 0.7) {
-        if (phase === 'pouring') setPhase('ready');
+        setPhase((prev) => prev === 'pouring' ? 'ready' : prev);
       }
     });
 
