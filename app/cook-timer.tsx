@@ -38,8 +38,8 @@ export default function CookTimerScreen() {
   const stepStartTimeRef = useRef(0);
 
   useEffect(() => {
-    getColdOneTime().then(setColdOneTime);
-    getRemindersEnabled().then(setRemindersEnabled);
+    getColdOneTime().then(setColdOneTime).catch(() => {});
+    getRemindersEnabled().then(setRemindersEnabled).catch(() => {});
   }, []);
 
   const currentStep: RecipeStep | undefined = recipe?.steps[currentStepIndex];

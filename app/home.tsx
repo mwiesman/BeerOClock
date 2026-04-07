@@ -14,7 +14,7 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      getColdOneTime().then(setColdOneTime);
+      getColdOneTime().then(setColdOneTime).catch(() => {});
     }, [])
   );
 

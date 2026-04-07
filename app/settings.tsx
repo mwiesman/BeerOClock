@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Switch, Pressable, Alert, ScrollView } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { colors, spacing, fontSize, shadows, emboss } from '../src/theme';
+import { colors, spacing, fontSize, shadows } from '../src/theme';
 import {
   getColdOneTime,
   formatTime,
@@ -34,9 +34,9 @@ export default function SettingsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      getColdOneTime().then(setColdOneTime);
-      getRemindersEnabled().then(setRemindersEnabled);
-      getGlassStyle().then(setGlassStyle);
+      getColdOneTime().then(setColdOneTime).catch(() => {});
+      getRemindersEnabled().then(setRemindersEnabled).catch(() => {});
+      getGlassStyle().then(setGlassStyle).catch(() => {});
     }, [])
   );
 

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, FlatList } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { colors, spacing, fontSize, shadows, emboss } from '../src/theme';
+import { colors, spacing, fontSize, emboss } from '../src/theme';
 import { getColdOneTime, formatColdOnes, toColdOnes } from '../src/utils/storage';
 import { recipes, Recipe } from '../src/data/recipes';
 import { recipeIconMap, BeerIcon } from '../src/components/icons/RecipeIcons';
@@ -15,7 +15,7 @@ export default function RecipesScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      getColdOneTime().then(setColdOneTime);
+      getColdOneTime().then(setColdOneTime).catch(() => {});
     }, [])
   );
 

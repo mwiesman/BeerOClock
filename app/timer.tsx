@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors, spacing, fontSize, shadows, emboss } from '../src/theme';
+import { colors, spacing, fontSize, shadows } from '../src/theme';
 import { saveColdOneTime, formatTimerDisplay } from '../src/utils/storage';
 import ScreenBackground from '../src/components/ScreenBackground';
 import Button from '../src/components/Button';
@@ -27,6 +27,12 @@ export default function TimerScreen() {
   const [manualSeconds, setManualSeconds] = useState('');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   const startTimer = useCallback(() => {
     setTimerState('running');

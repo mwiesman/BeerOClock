@@ -21,7 +21,12 @@ export async function saveRemindersEnabled(enabled: boolean): Promise<void> {
 
 export async function getRemindersEnabled(): Promise<boolean> {
   const value = await AsyncStorage.getItem(REMINDERS_KEY);
-  return value === null ? true : JSON.parse(value);
+  if (value === null) return true;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return true;
+  }
 }
 
 export async function saveGlassStyle(style: GlassStyle): Promise<void> {

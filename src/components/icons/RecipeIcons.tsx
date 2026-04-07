@@ -1,6 +1,5 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import GlossyIcon from '../GlossyIcon';
-import { colors } from '../../theme';
 
 interface IconProps {
   size?: number;

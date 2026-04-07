@@ -1,7 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
 import { Pressable, View, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, gradients } from '../src/theme';
+import { colors } from '../src/theme';
 
 export default function RootLayout() {
   const router = useRouter();

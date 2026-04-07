@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   heading: {
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xl,
     fontWeight: 'bold',
     color: colors.brown,
     textAlign: 'center',

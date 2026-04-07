@@ -22,7 +22,7 @@ export const recipes: Recipe[] = [
     category: 'beef',
     imageEmoji: '🍔',
     icon: 'burger',
-    totalTimeMinutes: 8,
+    totalTimeMinutes: 9,
     steps: [
       { instruction: 'Form patties and season with salt & pepper.' },
       { instruction: 'Grill first side over high heat.', timeMinutes: 4 },
@@ -37,7 +37,7 @@ export const recipes: Recipe[] = [
     category: 'beef',
     imageEmoji: '🫓',
     icon: 'burger',
-    totalTimeMinutes: 6,
+    totalTimeMinutes: 5,
     steps: [
       { instruction: 'Roll beef into loose balls. Heat grill/griddle screaming hot.' },
       { instruction: 'Place ball on grill and SMASH flat. Season.', timeMinutes: 2 },
@@ -52,7 +52,7 @@ export const recipes: Recipe[] = [
     category: 'beef',
     imageEmoji: '🥩',
     icon: 'steak',
-    totalTimeMinutes: 10,
+    totalTimeMinutes: 13,
     steps: [
       { instruction: 'Bring steak to room temp. Season generously.' },
       { instruction: 'Sear over high heat.', timeMinutes: 4 },
@@ -67,7 +67,7 @@ export const recipes: Recipe[] = [
     category: 'chicken',
     imageEmoji: '🍗',
     icon: 'chicken',
-    totalTimeMinutes: 20,
+    totalTimeMinutes: 21,
     steps: [
       { instruction: 'Pound chicken to even thickness. Season.' },
       { instruction: 'Grill over medium heat.', timeMinutes: 7 },
@@ -140,7 +140,7 @@ export const recipes: Recipe[] = [
     category: 'veggies',
     imageEmoji: '🥬',
     icon: 'veggie',
-    totalTimeMinutes: 8,
+    totalTimeMinutes: 7,
     steps: [
       { instruction: 'Trim woody ends. Toss with olive oil, salt, pepper.' },
       { instruction: 'Grill over high heat, turning once.', timeMinutes: 6 },
