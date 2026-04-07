@@ -8,7 +8,7 @@ import { getGlassStyle } from '../src/utils/storage';
 import Button from '../src/components/Button';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const STREAM_HEIGHT = SCREEN_HEIGHT * 0.28;
+const STREAM_HEIGHT = SCREEN_HEIGHT * 0.4;
 const NUM_BUBBLES = 8;
 
 // Physics tuning
@@ -130,7 +130,7 @@ export default function PourScreen() {
       colors={['#2D1200', colors.brown, '#1A0A00']}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
-      style={styles.container}
+      style={[styles.container, { overflow: 'visible' as const }]}
     >
       <Text style={styles.topText}>
         {phase === 'filling' && 'Pouring...'}
@@ -240,17 +240,14 @@ function PourStream({ streamWidth, fillLevel, fillScale, pouringRight, container
   const streamOpacity = (0.55 + fillLevel * 0.4) * fillScale;
   const scaledStreamHeight = STREAM_HEIGHT * fillScale;
 
-  // Taper: stream is wider at top, narrower at bottom
-  const topWidth = streamWidth * 1.15;
-  const bottomWidth = streamWidth * 0.55;
+  // Taper: stream is wider at top, narrower at bottom (gradual taper)
+  const topWidth = streamWidth * 1.8;
+  const bottomWidth = streamWidth * 1.1;
 
-  // Counter-rotate to cancel the glass wrapper's rotation, so the stream
-  // falls straight down with gravity. Arc angle increases with tilt —
-  // faster-moving liquid at steeper tilts has more horizontal momentum.
-  const arcAngle = pouringRight
-    ? 3 + Math.abs(tiltDeg) * 0.3
-    : -(3 + Math.abs(tiltDeg) * 0.3);
-  const counterRotation = -tiltDeg + arcAngle;
+  // Follow real-world gravity. The glass rotates by tiltDeg on screen,
+  // but real gravity angle ≈ smoothedTilt * 90. Counter-rotate the stream
+  // so it falls more perpendicular to the tilted glass.
+  const counterRotation = -tiltDeg * 4;
 
   return (
     <View
@@ -274,30 +271,27 @@ function PourStream({ streamWidth, fillLevel, fillScale, pouringRight, container
         opacity: streamOpacity,
       }]} />
 
-      {/* Main stream body — segmented taper for realistic narrowing.
-          Color starts matching the liquid (amber) and darkens/fades toward bottom. */}
-      <View style={[streamStyles.body, { height: scaledStreamHeight - 10, opacity: streamOpacity }]}>
-        {Array.from({ length: 6 }, (_, i) => {
-          const t = i / 5; // 0 at top, 1 at bottom
-          const segWidth = topWidth - t * (topWidth - bottomWidth);
-          const segHeight = (scaledStreamHeight - 10) / 6 + 1; // +1 overlap
-          // Color darkens and fades toward bottom
-          const segOpacity = 1 - t * 0.4;
-          return (
-            <View
-              key={i}
-              style={{
-                width: segWidth,
-                height: segHeight,
-                borderRadius: segWidth / 2,
-                backgroundColor: t < 0.5 ? colors.amber : colors.amberDark,
-                opacity: segOpacity,
-                alignSelf: 'center',
-                marginTop: i === 0 ? 0 : -2,
-              }}
-            />
-          );
-        })}
+      {/* Main stream body — trapezoid for real taper, inside a rounded
+          container for smooth edges. Wide at top, genuinely narrower at bottom. */}
+      <View style={{
+        width: topWidth + 4,
+        height: scaledStreamHeight - 10,
+        alignSelf: 'center',
+        borderRadius: topWidth / 2,
+        overflow: 'hidden',
+        opacity: streamOpacity,
+      }}>
+        <View style={{
+          width: bottomWidth,
+          height: 0,
+          alignSelf: 'center',
+          borderTopWidth: scaledStreamHeight - 10,
+          borderTopColor: colors.amber,
+          borderLeftWidth: (topWidth - bottomWidth) / 2,
+          borderLeftColor: 'transparent',
+          borderRightWidth: (topWidth - bottomWidth) / 2,
+          borderRightColor: 'transparent',
+        }} />
       </View>
 
       {/* Light reflection on stream */}
@@ -613,6 +607,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'visible',
   },
   topText: {
     color: colors.amberLight,
@@ -629,6 +624,7 @@ const styles = StyleSheet.create({
   glassWrapper: {
     alignItems: 'center',
     marginBottom: spacing.xl,
+    overflow: 'visible',
   },
   puddleWrap: {
     alignItems: 'center',
@@ -661,6 +657,7 @@ const streamStyles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     zIndex: 10,
+    overflow: 'visible',
   },
   spillCurve: {
     backgroundColor: colors.amber,
