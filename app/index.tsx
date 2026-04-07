@@ -245,9 +245,11 @@ function PourStream({ streamWidth, fillLevel, fillScale, pouringRight, container
   const bottomWidth = streamWidth * 0.55;
 
   // Counter-rotate to cancel the glass wrapper's rotation, so the stream
-  // falls straight down with gravity. Add a small arc angle for natural
-  // outward momentum as liquid leaves the lip.
-  const arcAngle = pouringRight ? 5 : -5;
+  // falls straight down with gravity. Arc angle increases with tilt —
+  // faster-moving liquid at steeper tilts has more horizontal momentum.
+  const arcAngle = pouringRight
+    ? 3 + Math.abs(tiltDeg) * 0.3
+    : -(3 + Math.abs(tiltDeg) * 0.3);
   const counterRotation = -tiltDeg + arcAngle;
 
   return (
@@ -272,22 +274,30 @@ function PourStream({ streamWidth, fillLevel, fillScale, pouringRight, container
         opacity: streamOpacity,
       }]} />
 
-      {/* Main stream body — gradient for depth, tapered from wide top to narrow bottom */}
-      <View style={[streamStyles.body, { height: scaledStreamHeight - 10, opacity: streamOpacity, overflow: 'hidden' as const }]}>
-        <LinearGradient
-          colors={[colors.amberLight, colors.amber, colors.amberDark]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={{
-            width: topWidth,
-            height: scaledStreamHeight - 10,
-            borderTopLeftRadius: topWidth / 2,
-            borderTopRightRadius: topWidth / 2,
-            borderBottomLeftRadius: bottomWidth / 2,
-            borderBottomRightRadius: bottomWidth / 2,
-            alignSelf: 'center',
-          }}
-        />
+      {/* Main stream body — segmented taper for realistic narrowing.
+          Color starts matching the liquid (amber) and darkens/fades toward bottom. */}
+      <View style={[streamStyles.body, { height: scaledStreamHeight - 10, opacity: streamOpacity }]}>
+        {Array.from({ length: 6 }, (_, i) => {
+          const t = i / 5; // 0 at top, 1 at bottom
+          const segWidth = topWidth - t * (topWidth - bottomWidth);
+          const segHeight = (scaledStreamHeight - 10) / 6 + 1; // +1 overlap
+          // Color darkens and fades toward bottom
+          const segOpacity = 1 - t * 0.4;
+          return (
+            <View
+              key={i}
+              style={{
+                width: segWidth,
+                height: segHeight,
+                borderRadius: segWidth / 2,
+                backgroundColor: t < 0.5 ? colors.amber : colors.amberDark,
+                opacity: segOpacity,
+                alignSelf: 'center',
+                marginTop: i === 0 ? 0 : -2,
+              }}
+            />
+          );
+        })}
       </View>
 
       {/* Light reflection on stream */}
@@ -308,11 +318,15 @@ function PourStream({ streamWidth, fillLevel, fillScale, pouringRight, container
         <View style={streamStyles.rimFoamDot3} />
       </View>
 
-      {/* Bubbles */}
+      {/* Bubbles — slight horizontal drift for more natural movement */}
       {bubbleAnims.map((anim, i) => {
         const translateY = anim.interpolate({
           inputRange: [0, 1],
-          outputRange: [0, STREAM_HEIGHT * 0.55],
+          outputRange: [0, scaledStreamHeight * 0.55],
+        });
+        const translateX = anim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [0, (bubbleXOffsets[i] - 0.5) * 6, 0],
         });
         const opacity = anim.interpolate({
           inputRange: [0, 0.2, 0.6, 1],
@@ -328,7 +342,7 @@ function PourStream({ streamWidth, fillLevel, fillScale, pouringRight, container
               height: bubbleSizes[i],
               borderRadius: bubbleSizes[i] / 2,
               left: streamWidth / 2 + xPos - bubbleSizes[i] / 2 + 4,
-              transform: [{ translateY }],
+              transform: [{ translateY }, { translateX }],
               opacity,
             }]}
           />
@@ -650,7 +664,7 @@ const streamStyles = StyleSheet.create({
   },
   spillCurve: {
     backgroundColor: colors.amber,
-    marginBottom: -3,
+    marginBottom: -4,
   },
   body: {
     alignItems: 'center',
