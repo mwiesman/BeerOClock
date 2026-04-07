@@ -382,81 +382,84 @@ function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight }: {
   const widthBlend = Math.min(1, lowSide / 20); // smooth over 20px
   const triangleW = narrowW + widthBlend * (containerWidth - narrowW);
 
+  const foamBand = 8 + fillLevel * 10;
+
   return (
     <View style={{
       position: 'absolute', bottom: 0, left: 0, right: 0,
       height: containerHeight,
       overflow: 'hidden',
     }}>
-      {/* Base liquid — gradient goes dark at bottom to amber at top so
-          the top edge matches the triangle color = no visible seam */}
+      {/* Base liquid rectangle — solid amber, overlaps triangle by 4px */}
       {lowSide > 1 && (
-        <LinearGradient
-          colors={[colors.amberDark, colors.amber]}
-          start={{ x: 0, y: 1 }}
-          end={{ x: 0, y: 0 }}
-          style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            height: lowSide,
-          }}
-        />
+        <View style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          height: lowSide + 4,
+          backgroundColor: colors.amber,
+        }} />
       )}
 
-      {/* Foam — rendered BEHIND liquid triangle so only the surface band shows.
-          Thicker foam with warm cream color at high opacity. */}
-      {triangleH > 2 && tiltBlend > 0.1 && (
-        <View
-          style={{
-            position: 'absolute',
-            top: containerHeight - highSide - foamHeight * 2.5,
-            ...(pourRight ? { right: 0 } : { left: 0 }),
-            width: 0,
-            height: 0,
-            backgroundColor: 'transparent',
-            borderStyle: 'solid',
-            borderBottomWidth: triangleH + foamHeight * 2.5,
-            borderBottomColor: '#FFF8E1',
-            ...(pourRight
-              ? { borderLeftWidth: triangleW, borderLeftColor: 'transparent' }
-              : { borderRightWidth: triangleW, borderRightColor: 'transparent' }
-            ),
-            opacity: Math.min(0.92, 0.9 * tiltBlend),
-          }}
-        />
-      )}
+      {/* Foam + liquid triangle — when tilted (triangleH > 2):
+          1. Cream triangle (behind) extends foamBand above the liquid
+          2. Amber triangle (on top) covers everything except the thin foam edge
+          Result: thin cream strip along the hypotenuse = foam on the surface.
 
-      {/* Angled surface — triangle from lowSide to highSide on pour side.
-          Width narrows below 50% fill as liquid gathers in pour corner. */}
-      {triangleH > 2 && (
-        <View
-          style={{
-            position: 'absolute',
-            top: containerHeight - highSide,
-            ...(pourRight ? { right: 0 } : { left: 0 }),
-            width: 0,
-            height: 0,
-            backgroundColor: 'transparent',
-            borderStyle: 'solid',
-            borderBottomWidth: triangleH,
-            borderBottomColor: colors.amber,
-            ...(pourRight
-              ? { borderLeftWidth: triangleW, borderLeftColor: 'transparent' }
-              : { borderRightWidth: triangleW, borderRightColor: 'transparent' }
-            ),
-          }}
-        />
-      )}
+          When upright (triangleH <= 2):
+          Flat cream band at fillHeight instead.
 
-      {/* Foam band — flat on top of liquid when upright, crossfades out as
-          the diagonal foam triangle takes over during tilt */}
-      {fillHeight > foamHeight && (
+          Hard switch — one or the other, never both, never neither. */}
+
+      {triangleH > 2 ? (
+        <>
+          {/* Foam triangle behind — taller AND wider than the amber triangle
+              so the foam strip is uniform along the entire hypotenuse,
+              not tapering to zero at the pour-side corner */}
+          <View
+            style={{
+              position: 'absolute',
+              top: containerHeight - highSide - foamBand,
+              ...(pourRight ? { right: 0 } : { left: 0 }),
+              width: 0,
+              height: 0,
+              backgroundColor: 'transparent',
+              borderStyle: 'solid',
+              borderBottomWidth: triangleH + foamBand,
+              borderBottomColor: '#FAF0D7',
+              ...(pourRight
+                ? { borderLeftWidth: triangleW + foamBand, borderLeftColor: 'transparent' }
+                : { borderRightWidth: triangleW + foamBand, borderRightColor: 'transparent' }
+              ),
+              opacity: 0.93,
+            }}
+          />
+          {/* Amber triangle on top */}
+          <View
+            style={{
+              position: 'absolute',
+              top: containerHeight - highSide,
+              ...(pourRight ? { right: 0 } : { left: 0 }),
+              width: 0,
+              height: 0,
+              backgroundColor: 'transparent',
+              borderStyle: 'solid',
+              borderBottomWidth: triangleH,
+              borderBottomColor: colors.amber,
+              ...(pourRight
+                ? { borderLeftWidth: triangleW, borderLeftColor: 'transparent' }
+                : { borderRightWidth: triangleW, borderRightColor: 'transparent' }
+              ),
+            }}
+          />
+        </>
+      ) : (
+        /* Flat foam band — when upright */
         <View style={{
           position: 'absolute',
-          bottom: fillHeight - foamHeight,
+          bottom: fillHeight - foamBand,
           left: 0, right: 0,
-          height: foamHeight,
-          backgroundColor: '#FFF8E1',
-          opacity: (0.8 + fillLevel * 0.2) * Math.max(0, 1 - tiltBlend * 1.5),
+          height: foamBand,
+          backgroundColor: '#FAF0D7',
+          opacity: 0.8,
         }} />
       )}
     </View>
