@@ -29,7 +29,6 @@ const MUG_HANDLE_W = 28;
 const BTL_BODY_W = 90;
 const BTL_BODY_H = 160;
 const BTL_NECK_W = 30;
-const BTL_NECK_H = 70;
 const CAN_W = 100;
 const CAN_H = 190;
 
@@ -359,8 +358,6 @@ function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight }: {
   const fillHeight = fillLevel * containerHeight;
   const tiltFactor = Math.abs(tiltDeg) / TILT_TO_ROTATION_DEG; // 0 to 1
   const pourRight = tiltDeg > 0;
-  const foamHeight = 4 + fillLevel * 12;
-
   // Smooth blend from flat (0) to fully tilted (1).
   // Ramps from 0.05 to 0.35 tilt so there's no sudden snap.
   const tiltBlend = Math.min(1, Math.max(0, (tiltFactor - 0.05) / 0.3));
@@ -424,7 +421,7 @@ function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight }: {
               backgroundColor: 'transparent',
               borderStyle: 'solid',
               borderBottomWidth: triangleH + foamBand,
-              borderBottomColor: '#FAF0D7',
+              borderBottomColor: colors.foam,
               ...(pourRight
                 ? { borderLeftWidth: triangleW + foamBand, borderLeftColor: 'transparent' }
                 : { borderRightWidth: triangleW + foamBand, borderRightColor: 'transparent' }
@@ -458,7 +455,7 @@ function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight }: {
           bottom: fillHeight - foamBand,
           left: 0, right: 0,
           height: foamBand,
-          backgroundColor: '#FAF0D7',
+          backgroundColor: colors.foam,
           opacity: 0.8,
         }} />
       )}

@@ -10,6 +10,7 @@ export const colors = {
   brownLight: '#92400E',
   cream: '#FFFBEB',
   creamDark: '#FEF3C7',
+  foam: '#FAF0D7',
   white: '#FFFFFF',
   offWhite: '#FFF9ED',
   black: '#1C1917',
