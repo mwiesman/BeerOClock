@@ -355,11 +355,12 @@ function PourStream({ streamWidth, fillLevel, fillScale, pouringRight, container
 // to simulate gravity keeping the liquid level. At lower fill levels the
 // surface angle is more dramatic — less liquid means more visible slosh.
 
-function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight }: {
+function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight, showFoam = true }: {
   fillLevel: number;
   tiltDeg: number;
   containerWidth: number;
   containerHeight: number;
+  showFoam?: boolean;
 }) {
   if (fillLevel <= 0) return null;
 
@@ -404,40 +405,31 @@ function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight }: {
         }} />
       )}
 
-      {/* Foam + liquid triangle — when tilted (triangleH > 2):
-          1. Cream triangle (behind) extends foamBand above the liquid
-          2. Amber triangle (on top) covers everything except the thin foam edge
-          Result: thin cream strip along the hypotenuse = foam on the surface.
-
-          When upright (triangleH <= 2):
-          Flat cream band at fillHeight instead.
-
-          Hard switch — one or the other, never both, never neither. */}
-
+      {/* Liquid triangle + optional foam */}
       {triangleH > 2 ? (
         <>
-          {/* Foam triangle behind — taller AND wider than the amber triangle
-              so the foam strip is uniform along the entire hypotenuse,
-              not tapering to zero at the pour-side corner */}
-          <View
-            style={{
-              position: 'absolute',
-              top: containerHeight - highSide - foamBand,
-              ...(pourRight ? { right: 0 } : { left: 0 }),
-              width: 0,
-              height: 0,
-              backgroundColor: 'transparent',
-              borderStyle: 'solid',
-              borderBottomWidth: triangleH + foamBand,
-              borderBottomColor: colors.foam,
-              ...(pourRight
-                ? { borderLeftWidth: triangleW + foamBand, borderLeftColor: 'transparent' }
-                : { borderRightWidth: triangleW + foamBand, borderRightColor: 'transparent' }
-              ),
-              opacity: 0.93,
-            }}
-          />
-          {/* Amber triangle on top */}
+          {/* Foam triangle behind (only for open containers like glasses/mugs) */}
+          {showFoam && (
+            <View
+              style={{
+                position: 'absolute',
+                top: containerHeight - highSide - foamBand,
+                ...(pourRight ? { right: 0 } : { left: 0 }),
+                width: 0,
+                height: 0,
+                backgroundColor: 'transparent',
+                borderStyle: 'solid',
+                borderBottomWidth: triangleH + foamBand,
+                borderBottomColor: colors.foam,
+                ...(pourRight
+                  ? { borderLeftWidth: triangleW + foamBand, borderLeftColor: 'transparent' }
+                  : { borderRightWidth: triangleW + foamBand, borderRightColor: 'transparent' }
+                ),
+                opacity: 0.93,
+              }}
+            />
+          )}
+          {/* Amber triangle */}
           <View
             style={{
               position: 'absolute',
@@ -457,15 +449,17 @@ function BeerFill({ fillLevel, tiltDeg, containerWidth, containerHeight }: {
           />
         </>
       ) : (
-        /* Flat foam band — when upright */
-        <View style={{
-          position: 'absolute',
-          bottom: fillHeight - foamBand,
-          left: 0, right: 0,
-          height: foamBand,
-          backgroundColor: colors.foam,
-          opacity: 0.8,
-        }} />
+        showFoam && (
+          /* Flat foam band — when upright */
+          <View style={{
+            position: 'absolute',
+            bottom: fillHeight - foamBand,
+            left: 0, right: 0,
+            height: foamBand,
+            backgroundColor: colors.foam,
+            opacity: 0.8,
+          }} />
+        )
       )}
     </View>
   );
@@ -508,29 +502,59 @@ function FrostyMug({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number 
   );
 }
 
+// ─── Bottle Fill (two-zone clipping) ─────────────────────
+// The bottle has a narrow neck (30px) and wide body (90px). A single
+// rectangular BeerFill would bleed outside the neck. Instead, we render
+// two clipping zones: body (full width) and neck (narrow width), each
+// with overflow:hidden. The shoulder creates a natural visual transition.
+const BTL_NECK_H = 50;
+const BTL_SHOULDER_H = 24;
+const BTL_BODY_AND_SHOULDER_H = BTL_BODY_H + BTL_SHOULDER_H; // 184
+
+function BottleFill({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number }) {
+  if (fillLevel <= 0) return null;
+
+  const totalH = BTL_NECK_H + BTL_SHOULDER_H + BTL_BODY_H; // 234
+  const maskW = (BTL_BODY_W - BTL_NECK_W) / 2; // 30px each side
+
+  // Single BeerFill spanning the entire bottle — liquid naturally rises
+  // on the pour side through the shoulder and into the neck as one diagonal.
+  // Subtle masks on the neck sides hide amber beyond the 30px neck width.
+  return (
+    <>
+      <BeerFill
+        fillLevel={fillLevel}
+        tiltDeg={tiltDeg}
+        containerWidth={BTL_BODY_W}
+        containerHeight={totalH}
+        showFoam={false}
+      />
+      {/* Neck-only side masks — subtle, blending with dark background.
+          Only cover the neck area (not shoulder) to avoid visible shadow. */}
+      <View style={{
+        position: 'absolute', top: 0, left: 0,
+        width: maskW, height: BTL_NECK_H,
+        backgroundColor: 'rgba(35, 15, 2, 0.88)',
+      }} />
+      <View style={{
+        position: 'absolute', top: 0, right: 0,
+        width: maskW, height: BTL_NECK_H,
+        backgroundColor: 'rgba(35, 15, 2, 0.88)',
+      }} />
+    </>
+  );
+}
+
 // ─── Beer Bottle ─────────────────────────────────────────
 function BeerBottle({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number }) {
-  // Total interior height: neck(50) + shoulder(24) + body(160) = 234
-  // BeerFill spans the entire interior so liquid is one continuous body
-  // that naturally climbs into the neck when tilted.
-  const neckH = 50;
-  const shoulderH = 24;
-  const totalInteriorH = neckH + shoulderH + BTL_BODY_H;
-
   return (
     <View style={{ alignItems: 'center' }}>
       {/* Cap */}
       <View style={btlStyles.cap} />
-      {/* Unified liquid container: neck + shoulder + body share one BeerFill */}
+      {/* Bottle interior with two-zone liquid fill */}
       <View style={btlStyles.bottleInterior}>
-        {/* One continuous BeerFill spanning the entire bottle interior */}
-        <BeerFill
-          fillLevel={fillLevel}
-          tiltDeg={tiltDeg}
-          containerWidth={BTL_BODY_W}
-          containerHeight={totalInteriorH}
-        />
-        {/* Neck outline — just borders, no separate fill */}
+        <BottleFill fillLevel={fillLevel} tiltDeg={tiltDeg} />
+        {/* Neck outline */}
         <View style={btlStyles.neckOverlay}>
           <View style={btlStyles.neckShine} />
         </View>
@@ -771,19 +795,18 @@ const btlStyles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
     marginBottom: -1,
   },
-  // Unified container for neck + shoulder + body — one BeerFill fills this
+  // Container for neck + shoulder + body — BottleFill clips liquid to shape
   bottleInterior: {
     width: BTL_BODY_W,
-    height: 50 + 24 + BTL_BODY_H, // neck + shoulder + body
+    height: BTL_NECK_H + BTL_SHOULDER_H + BTL_BODY_H,
     overflow: 'hidden',
     alignItems: 'center',
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
   },
-  // Neck, shoulder, body are now overlays (just borders/shape, no fill)
   neckOverlay: {
     position: 'absolute', top: 0,
-    width: BTL_NECK_W, height: 50,
+    width: BTL_NECK_W, height: BTL_NECK_H,
     alignSelf: 'center',
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
     borderTopWidth: 0, borderBottomWidth: 0,
@@ -794,8 +817,8 @@ const btlStyles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 1,
   },
   shoulderOverlay: {
-    position: 'absolute', top: 50,
-    width: BTL_BODY_W, height: 24,
+    position: 'absolute', top: BTL_NECK_H,
+    width: BTL_BODY_W, height: BTL_SHOULDER_H,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
     borderTopWidth: 0, borderBottomWidth: 0,
     borderTopLeftRadius: BTL_BODY_W / 2,
@@ -803,7 +826,7 @@ const btlStyles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.03)',
   },
   bodyOverlay: {
-    position: 'absolute', top: 50 + 24,
+    position: 'absolute', top: BTL_NECK_H + BTL_SHOULDER_H,
     width: BTL_BODY_W, height: BTL_BODY_H,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
     borderTopWidth: 0,
