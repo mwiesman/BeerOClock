@@ -586,6 +586,11 @@ const BOTTLE_AREA = polyArea(BOTTLE_POLY);
 // more, so the surface must over-rotate for the neck to fill while pouring.
 const BTL_TILT_GAIN = 0.085;
 const BTL_MAX_SURFACE = 1.45; // rad clamp (~83°) — steeper keeps the neck fed
+// As the bottle empties you tip it up more for the last drops; ramp the
+// surface steeper with emptiness so the final liquid stays drawn toward the
+// neck instead of detaching from the stream. Zero effect when full.
+const BTL_EMPTY_GAIN = 0.6;
+const BTL_EMPTY_STEEPEN = 0.08; // extra rad of clamp at empty (~83°→~88°)
 // Thickness (viewBox px) of the lighter meniscus band along the surface, so
 // the liquid top reads as a surface catching light rather than a razor cut.
 const BTL_SURFACE_BAND = 7;
@@ -599,8 +604,14 @@ function BottleFill({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number
   // bottle. This conserves volume at ANY tilt: a full bottle is always
   // completely full (no fake air), the level genuinely drops as it empties,
   // and the neck fills/drains naturally — one region, no seams.
+  const emptiness = 1 - fillLevel; // 0 full → 1 empty
+  const maxSurf = BTL_MAX_SURFACE + emptiness * BTL_EMPTY_STEEPEN;
   const phi = Math.max(
-    -BTL_MAX_SURFACE, Math.min(BTL_MAX_SURFACE, tiltDeg * BTL_TILT_GAIN),
+    -maxSurf,
+    Math.min(
+      maxSurf,
+      tiltDeg * BTL_TILT_GAIN * (1 + emptiness * BTL_EMPTY_GAIN),
+    ),
   );
   // Surface normal points toward the air. For pourRight (tiltDeg>0) the beer
   // gathers right, so air is up-and-left → nx negative.
