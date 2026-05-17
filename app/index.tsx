@@ -351,25 +351,6 @@ function PourStream({ streamWidth, fillLevel, fillScale, pouringRight, container
   );
 }
 
-// ─── Shared: Liquid Surface Math ─────────────────────────
-// Computes the tilted liquid surface geometry for a given fill level,
-// tilt angle, and container dimensions. Used by BeerFill and BottleFill.
-function liquidSurface(fillLevel: number, tiltDeg: number, W: number, H: number) {
-  const fillHeight = fillLevel * H;
-  const tiltFactor = Math.abs(tiltDeg) / TILT_TO_ROTATION_DEG;
-  const pourRight = tiltDeg > 0;
-  const tiltBlend = Math.min(1, Math.max(0, (tiltFactor - 0.05) / 0.3));
-  const highTarget = H;
-  const lowTarget = Math.max(0, 2 * fillHeight - H);
-  const highSide = fillHeight + tiltBlend * (highTarget - fillHeight);
-  const lowSide = fillHeight - tiltBlend * (fillHeight - lowTarget);
-  const triangleH = highSide - lowSide;
-  const narrowW = Math.max(8, 2 * fillLevel * W);
-  const widthBlend = Math.min(1, lowSide / 20);
-  const triangleW = narrowW + widthBlend * (W - narrowW);
-  return { fillHeight, pourRight, tiltBlend, highSide, lowSide, triangleH, triangleW };
-}
-
 // ─── Shared: Beer Fill + Foam ─────────────────────────────
 // Liquid surface tilts opposite to the container rotation (counter-rotation)
 // to simulate gravity keeping the liquid level. At lower fill levels the
@@ -529,7 +510,6 @@ function FrostyMug({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number 
 // surface is continuous from body through shoulder up into the neck.
 const BTL_NECK_H = 50;
 const BTL_SHOULDER_H = 24;
-const BTL_BODY_AND_SHOULDER_H = BTL_BODY_H + BTL_SHOULDER_H; // 184
 
 // Bottle interior silhouette path (SVG coords, y=0 at top / bottle mouth):
 //   Neck: 30px wide centred in the 90px frame (x 30..60), 50px tall.
@@ -538,9 +518,8 @@ const BTL_BODY_AND_SHOULDER_H = BTL_BODY_H + BTL_SHOULDER_H; // 184
 const BOTTLE_CLIP_D =
   'M 30 0 L 60 0 L 60 50 C 60 62 78 64 90 74 L 90 226 Q 90 234 82 234 L 8 234 Q 0 234 0 226 L 0 74 C 12 64 30 62 30 50 Z';
 
-// Neck horizontal span within the 90px frame (used for the neck shine).
+// Neck left edge within the 90px frame (used for the neck shine).
 const BTL_NECK_X0 = (BTL_BODY_W - BTL_NECK_W) / 2; // 30
-const BTL_NECK_X1 = BTL_NECK_X0 + BTL_NECK_W; // 60
 
 // Polygon approximation of the bottle interior (matches BOTTLE_CLIP_D),
 // SVG coords, y=0 at the mouth. Used only to compute the liquid area.
@@ -953,39 +932,6 @@ const btlStyles = StyleSheet.create({
     alignItems: 'center',
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
-  },
-  neckOverlay: {
-    position: 'absolute', top: 0,
-    width: BTL_NECK_W, height: BTL_NECK_H,
-    alignSelf: 'center',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
-    borderTopWidth: 0, borderBottomWidth: 0,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-  },
-  neckShine: {
-    position: 'absolute', top: 5, left: 5, width: 2, height: '70%',
-    backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 1,
-  },
-  shoulderOverlay: {
-    position: 'absolute', top: BTL_NECK_H,
-    width: BTL_BODY_W, height: BTL_SHOULDER_H,
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
-    borderTopWidth: 0, borderBottomWidth: 0,
-    borderTopLeftRadius: BTL_BODY_W / 2,
-    borderTopRightRadius: BTL_BODY_W / 2,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-  },
-  bodyOverlay: {
-    position: 'absolute', top: BTL_NECK_H + BTL_SHOULDER_H,
-    width: BTL_BODY_W, height: BTL_BODY_H,
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)',
-    borderTopWidth: 0,
-    borderBottomLeftRadius: 8, borderBottomRightRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-  },
-  bodyShine: {
-    position: 'absolute', top: 8, left: 10, width: 3, height: '60%',
-    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 2,
   },
   label: {
     position: 'absolute', top: 104, left: 8, right: 8,
