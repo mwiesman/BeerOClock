@@ -584,8 +584,11 @@ const BOTTLE_AREA = polyArea(BOTTLE_POLY);
 // Liquid-surface steepness: radians of surface tilt per degree of on-screen
 // bottle rotation. The bottle only rotates ~25° but the phone tilts much
 // more, so the surface must over-rotate for the neck to fill while pouring.
-const BTL_TILT_GAIN = 0.075;
-const BTL_MAX_SURFACE = 1.2; // rad clamp (~69°)
+const BTL_TILT_GAIN = 0.085;
+const BTL_MAX_SURFACE = 1.45; // rad clamp (~83°) — steeper keeps the neck fed
+// Thickness (viewBox px) of the lighter meniscus band along the surface, so
+// the liquid top reads as a surface catching light rather than a razor cut.
+const BTL_SURFACE_BAND = 7;
 
 function BottleFill({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number }) {
   if (fillLevel <= 0) return null;
@@ -626,6 +629,17 @@ function BottleFill({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number
     .map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`)
     .join(' ');
 
+  // Meniscus: the slice of beer within BTL_SURFACE_BAND of the surface line
+  // (n·p >= t - band), drawn a touch lighter so the top edge looks like a
+  // liquid surface, not a hard cut.
+  const meniscus = clipHalfPlane(
+    beerPts, -nx, -ny, -(t - BTL_SURFACE_BAND),
+  );
+  const meniscusPoints =
+    meniscus.length >= 3
+      ? meniscus.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
+      : null;
+
   return (
     <Svg
       width={BTL_BODY_W}
@@ -639,6 +653,14 @@ function BottleFill({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number
         </ClipPath>
       </Defs>
       <Polygon points={points} fill={colors.amber} clipPath="url(#bottleClip)" />
+      {meniscusPoints && (
+        <Polygon
+          points={meniscusPoints}
+          fill={colors.amberLight}
+          opacity={0.5}
+          clipPath="url(#bottleClip)"
+        />
+      )}
     </Svg>
   );
 }
