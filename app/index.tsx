@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Accelerometer } from 'expo-sensors';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Svg, Path, Polygon, ClipPath, Defs } from 'react-native-svg';
 import { colors, spacing, fontSize } from '../src/theme';
 import { getGlassStyle } from '../src/utils/storage';
 import Button from '../src/components/Button';
@@ -350,6 +351,25 @@ function PourStream({ streamWidth, fillLevel, fillScale, pouringRight, container
   );
 }
 
+// ─── Shared: Liquid Surface Math ─────────────────────────
+// Computes the tilted liquid surface geometry for a given fill level,
+// tilt angle, and container dimensions. Used by BeerFill and BottleFill.
+function liquidSurface(fillLevel: number, tiltDeg: number, W: number, H: number) {
+  const fillHeight = fillLevel * H;
+  const tiltFactor = Math.abs(tiltDeg) / TILT_TO_ROTATION_DEG;
+  const pourRight = tiltDeg > 0;
+  const tiltBlend = Math.min(1, Math.max(0, (tiltFactor - 0.05) / 0.3));
+  const highTarget = H;
+  const lowTarget = Math.max(0, 2 * fillHeight - H);
+  const highSide = fillHeight + tiltBlend * (highTarget - fillHeight);
+  const lowSide = fillHeight - tiltBlend * (fillHeight - lowTarget);
+  const triangleH = highSide - lowSide;
+  const narrowW = Math.max(8, 2 * fillLevel * W);
+  const widthBlend = Math.min(1, lowSide / 20);
+  const triangleW = narrowW + widthBlend * (W - narrowW);
+  return { fillHeight, pourRight, tiltBlend, highSide, lowSide, triangleH, triangleW };
+}
+
 // ─── Shared: Beer Fill + Foam ─────────────────────────────
 // Liquid surface tilts opposite to the container rotation (counter-rotation)
 // to simulate gravity keeping the liquid level. At lower fill levels the
@@ -502,46 +522,124 @@ function FrostyMug({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number 
   );
 }
 
-// ─── Bottle Fill (two-zone clipping) ─────────────────────
-// The bottle has a narrow neck (30px) and wide body (90px). A single
-// rectangular BeerFill would bleed outside the neck. Instead, we render
-// two clipping zones: body (full width) and neck (narrow width), each
-// with overflow:hidden. The shoulder creates a natural visual transition.
+// ─── Bottle Fill (SVG clip to bottle silhouette) ─────────
+// Renders the liquid as a single SVG Polygon clipped to the true bottle
+// outline — neck, shoulder cubic curves, and rounded body base — so the
+// amber colour never bleeds outside the glass silhouette and the liquid
+// surface is continuous from body through shoulder up into the neck.
 const BTL_NECK_H = 50;
 const BTL_SHOULDER_H = 24;
 const BTL_BODY_AND_SHOULDER_H = BTL_BODY_H + BTL_SHOULDER_H; // 184
 
+// Bottle interior silhouette path (SVG coords, y=0 at top / bottle mouth):
+//   Neck: 30px wide centred in the 90px frame (x 30..60), 50px tall.
+//   Shoulder: cubic curves flaring from 30px@y=50 to 90px@y=74.
+//   Body: full width x 0..90, y 74..234 with 8px rounded bottom corners.
+const BOTTLE_CLIP_D =
+  'M 30 0 L 60 0 L 60 50 C 60 62 78 64 90 74 L 90 226 Q 90 234 82 234 L 8 234 Q 0 234 0 226 L 0 74 C 12 64 30 62 30 50 Z';
+
+// Neck horizontal span within the 90px frame (used for the neck shine).
+const BTL_NECK_X0 = (BTL_BODY_W - BTL_NECK_W) / 2; // 30
+const BTL_NECK_X1 = BTL_NECK_X0 + BTL_NECK_W; // 60
+
+// Polygon approximation of the bottle interior (matches BOTTLE_CLIP_D),
+// SVG coords, y=0 at the mouth. Used only to compute the liquid area.
+const BOTTLE_POLY: Array<[number, number]> = [
+  [30, 0], [60, 0], [60, 50], [72, 58], [82, 66], [90, 74],
+  [90, 226], [86, 232], [80, 234], [10, 234], [4, 232], [0, 226],
+  [0, 74], [10, 64], [22, 57], [30, 50],
+];
+
+function polyArea(pts: Array<[number, number]>): number {
+  let a = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [x1, y1] = pts[i];
+    const [x2, y2] = pts[(i + 1) % pts.length];
+    a += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(a) / 2;
+}
+
+// Sutherland–Hodgman clip of a polygon to the half-plane n·p <= t.
+function clipHalfPlane(
+  pts: Array<[number, number]>, nx: number, ny: number, t: number,
+): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  const n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const A = pts[i];
+    const B = pts[(i + 1) % n];
+    const da = nx * A[0] + ny * A[1] - t;
+    const db = nx * B[0] + ny * B[1] - t;
+    if (da <= 0) out.push(A);
+    if ((da < 0 && db > 0) || (da > 0 && db < 0)) {
+      const s = da / (da - db);
+      out.push([A[0] + s * (B[0] - A[0]), A[1] + s * (B[1] - A[1])]);
+    }
+  }
+  return out;
+}
+
+const BOTTLE_AREA = polyArea(BOTTLE_POLY);
+// Liquid-surface steepness: radians of surface tilt per degree of on-screen
+// bottle rotation. The bottle only rotates ~25° but the phone tilts much
+// more, so the surface must over-rotate for the neck to fill while pouring.
+const BTL_TILT_GAIN = 0.075;
+const BTL_MAX_SURFACE = 1.2; // rad clamp (~69°)
+
 function BottleFill({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number }) {
   if (fillLevel <= 0) return null;
+  const H = BTL_NECK_H + BTL_SHOULDER_H + BTL_BODY_H; // 234
 
-  const totalH = BTL_NECK_H + BTL_SHOULDER_H + BTL_BODY_H; // 234
-  const maskW = (BTL_BODY_W - BTL_NECK_W) / 2; // 30px each side
+  // One flat liquid surface; the beer is the whole region below it. The
+  // surface OFFSET is solved so the AIR area above it equals (1-fill) of the
+  // bottle. This conserves volume at ANY tilt: a full bottle is always
+  // completely full (no fake air), the level genuinely drops as it empties,
+  // and the neck fills/drains naturally — one region, no seams.
+  const phi = Math.max(
+    -BTL_MAX_SURFACE, Math.min(BTL_MAX_SURFACE, tiltDeg * BTL_TILT_GAIN),
+  );
+  // Surface normal points toward the air. For pourRight (tiltDeg>0) the beer
+  // gathers right, so air is up-and-left → nx negative.
+  const nx = -Math.sin(phi);
+  const ny = -Math.cos(phi);
+  const targetAir = (1 - fillLevel) * BOTTLE_AREA;
 
-  // Single BeerFill spanning the entire bottle — liquid naturally rises
-  // on the pour side through the shoulder and into the neck as one diagonal.
-  // Subtle masks on the neck sides hide amber beyond the 30px neck width.
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const [x, y] of BOTTLE_POLY) {
+    const d = nx * x + ny * y;
+    if (d < lo) lo = d;
+    if (d > hi) hi = d;
+  }
+  let t = (lo + hi) / 2;
+  for (let it = 0; it < 24; it++) {
+    t = (lo + hi) / 2;
+    const beer = clipHalfPlane(BOTTLE_POLY, nx, ny, t);
+    const air = BOTTLE_AREA - (beer.length >= 3 ? polyArea(beer) : 0);
+    if (air > targetAir) lo = t; // too much air → push surface down (larger t)
+    else hi = t;
+  }
+  const beerPts = clipHalfPlane(BOTTLE_POLY, nx, ny, t);
+  if (beerPts.length < 3) return null;
+  const points = beerPts
+    .map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(' ');
+
   return (
-    <>
-      <BeerFill
-        fillLevel={fillLevel}
-        tiltDeg={tiltDeg}
-        containerWidth={BTL_BODY_W}
-        containerHeight={totalH}
-        showFoam={false}
-      />
-      {/* Neck-only side masks — subtle, blending with dark background.
-          Only cover the neck area (not shoulder) to avoid visible shadow. */}
-      <View style={{
-        position: 'absolute', top: 0, left: 0,
-        width: maskW, height: BTL_NECK_H,
-        backgroundColor: 'rgba(35, 15, 2, 0.88)',
-      }} />
-      <View style={{
-        position: 'absolute', top: 0, right: 0,
-        width: maskW, height: BTL_NECK_H,
-        backgroundColor: 'rgba(35, 15, 2, 0.88)',
-      }} />
-    </>
+    <Svg
+      width={BTL_BODY_W}
+      height={H}
+      viewBox={`0 0 ${BTL_BODY_W} ${H}`}
+      style={{ position: 'absolute', top: 0, left: 0 }}
+    >
+      <Defs>
+        <ClipPath id="bottleClip">
+          <Path d={BOTTLE_CLIP_D} />
+        </ClipPath>
+      </Defs>
+      <Polygon points={points} fill={colors.amber} clipPath="url(#bottleClip)" />
+    </Svg>
   );
 }
 
@@ -551,25 +649,44 @@ function BeerBottle({ fillLevel, tiltDeg }: { fillLevel: number; tiltDeg: number
     <View style={{ alignItems: 'center' }}>
       {/* Cap */}
       <View style={btlStyles.cap} />
-      {/* Bottle interior with two-zone liquid fill */}
+      {/* Bottle interior — liquid + glass outline share one silhouette */}
       <View style={btlStyles.bottleInterior}>
         <BottleFill fillLevel={fillLevel} tiltDeg={tiltDeg} />
-        {/* Neck outline */}
-        <View style={btlStyles.neckOverlay}>
-          <View style={btlStyles.neckShine} />
-        </View>
-        {/* Shoulder outline */}
-        <View style={btlStyles.shoulderOverlay} />
-        {/* Body outline + label + shine */}
-        <View style={btlStyles.bodyOverlay}>
-          <View style={btlStyles.bodyShine} />
-          <View style={btlStyles.label}>
-            <View style={btlStyles.labelBorder}>
-              <Text style={btlStyles.labelBrand}>O'CLOCK</Text>
-              <Text style={btlStyles.labelSub}>BREWING CO.</Text>
-              <View style={btlStyles.labelLine} />
-              <Text style={btlStyles.labelType}>LAGER</Text>
-            </View>
+        {/* Glass outline + shine, drawn from the SAME path the liquid is
+            clipped to, so the outline and beer always align (no shoulder
+            crescents). */}
+        <Svg
+          width={BTL_BODY_W}
+          height={BTL_NECK_H + BTL_SHOULDER_H + BTL_BODY_H}
+          viewBox={`0 0 ${BTL_BODY_W} ${BTL_NECK_H + BTL_SHOULDER_H + BTL_BODY_H}`}
+          style={{ position: 'absolute', top: 0, left: 0 }}
+        >
+          <Path
+            d={BOTTLE_CLIP_D}
+            fill="rgba(255,255,255,0.03)"
+            stroke="rgba(255,255,255,0.2)"
+            strokeWidth={2}
+          />
+          <Path
+            d={`M 13 ${BTL_NECK_H + BTL_SHOULDER_H + 14} L 13 ${BTL_NECK_H + BTL_SHOULDER_H + BTL_BODY_H - 26}`}
+            stroke="rgba(255,255,255,0.13)"
+            strokeWidth={3}
+            strokeLinecap="round"
+          />
+          <Path
+            d={`M ${BTL_NECK_X0 + 4} 7 L ${BTL_NECK_X0 + 4} ${BTL_NECK_H - 8}`}
+            stroke="rgba(255,255,255,0.15)"
+            strokeWidth={2}
+            strokeLinecap="round"
+          />
+        </Svg>
+        {/* Label */}
+        <View style={btlStyles.label}>
+          <View style={btlStyles.labelBorder}>
+            <Text style={btlStyles.labelBrand}>O'CLOCK</Text>
+            <Text style={btlStyles.labelSub}>BREWING CO.</Text>
+            <View style={btlStyles.labelLine} />
+            <Text style={btlStyles.labelType}>LAGER</Text>
           </View>
         </View>
       </View>
@@ -838,7 +955,7 @@ const btlStyles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 2,
   },
   label: {
-    position: 'absolute', top: 30, left: 8, right: 8,
+    position: 'absolute', top: 104, left: 8, right: 8,
     height: 80, backgroundColor: 'rgba(254,243,199,0.15)',
     borderRadius: 4, alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
